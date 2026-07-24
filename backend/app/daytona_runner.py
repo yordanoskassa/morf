@@ -1,0 +1,149 @@
+"""Daytona sandbox: apply a candidate diff -> build -> render-check -> push. 🔒 immutable.
+
+We time each step ourselves — the Daytona SDK exposes no latency field on exec().
+"""
+from __future__ import annotations
+import time
+import asyncio
+from dataclasses import dataclass, field
+
+import httpx
+from daytona import (
+    AsyncDaytona,
+    DaytonaConfig,
+    CreateSandboxFromSnapshotParams,
+    FileUpload,
+    SessionExecuteRequest,
+)
+
+from . import config
+from .schemas import FileEdit
+
+
+@dataclass
+class EvalOut:
+    compiled: bool = False
+    rendered: bool = False
+    build_ms: int = 0
+    render_ms: int = 0
+    build_log: str = ""
+    preview_url: str | None = None
+    error: str = ""
+
+
+def _daytona() -> AsyncDaytona:
+    return AsyncDaytona(DaytonaConfig(api_key=config.DAYTONA_API_KEY))
+
+
+def _repo_url_with_token() -> str:
+    # https auth: embed PAT so clone/push need no interactive creds
+    return f"https://{config.GITHUB_USER}:{config.GITHUB_TOKEN}@github.com/{config.GITHUB_REPO}.git"
+
+
+async def _clone_repo(sandbox, path: str = "repo") -> None:
+    await sandbox.git.clone(
+        url=f"https://github.com/{config.GITHUB_REPO}.git",
+        path=path,
+        username=config.GITHUB_USER,
+        password=config.GITHUB_TOKEN,
+    )
+
+
+async def _write_files(sandbox, files: list[FileEdit], root: str = "repo") -> None:
+    uploads = [FileUpload(source=f.content.encode(), destination=f"{root}/{f.path}") for f in files]
+    await sandbox.fs.upload_files(uploads)
+
+
+async def evaluate(files: list[FileEdit]) -> EvalOut:
+    """Spin an ephemeral sandbox, apply files, build + render-check. Always cleaned up."""
+    out = EvalOut()
+    daytona = _daytona()
+    sandbox = None
+    try:
+        async with daytona:
+            sandbox = await daytona.create(
+                CreateSandboxFromSnapshotParams(
+                    snapshot=config.DAYTONA_SNAPSHOT,
+                    ephemeral=True,
+                    auto_stop_interval=0,   # keep alive; dev server req doesn't reset the timer
+                )
+            )
+            await _clone_repo(sandbox)
+            await _write_files(sandbox, files)
+
+            app_dir = f"repo/{config.APP_SUBDIR}"
+
+            # --- compile? ---
+            t0 = time.perf_counter()
+            build = await sandbox.process.exec(config.BUILD_CMD, cwd=app_dir, timeout=300)
+            out.build_ms = int((time.perf_counter() - t0) * 1000)
+            out.build_log = (build.result or "")[-4000:]
+            out.compiled = build.exit_code == 0
+            if not out.compiled:
+                return out
+
+            # --- render? --- start dev server, poll the public preview URL for 200
+            t1 = time.perf_counter()
+            await sandbox.process.create_session("dev")
+            await sandbox.process.execute_session_command(
+                "dev",
+                SessionExecuteRequest(command=f"cd {app_dir} && {config.DEV_CMD}", run_async=True),
+            )
+            preview = await sandbox.get_preview_link(config.DEV_PORT)
+            out.preview_url = preview.url
+            headers = {"x-daytona-preview-token": preview.token} if preview.token else {}
+            out.rendered = await _probe(preview.url, headers)
+            out.render_ms = int((time.perf_counter() - t1) * 1000)
+            return out
+    except Exception as e:  # noqa: BLE001
+        out.error = f"{type(e).__name__}: {e}"
+        return out
+    finally:
+        if sandbox is not None:
+            try:
+                await sandbox.delete()   # ephemeral, but delete explicitly to free the pool
+            except Exception:  # noqa: BLE001
+                pass
+
+
+async def _probe(url: str, headers: dict, tries: int = 15, delay: float = 1.0) -> bool:
+    """Dev server needs a few seconds to boot; poll until 200 with real HTML."""
+    async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as http:
+        for _ in range(tries):
+            try:
+                r = await http.get(url, headers=headers)
+                if r.status_code == 200 and "<" in r.text[:200]:
+                    return True
+            except httpx.HTTPError:
+                pass
+            await asyncio.sleep(delay)
+    return False
+
+
+async def ship(files: list[FileEdit], message: str) -> str | None:
+    """Apply the winning files to the repo and push to GitHub. Returns commit sha."""
+    daytona = _daytona()
+    sandbox = None
+    try:
+        async with daytona:
+            sandbox = await daytona.create(
+                CreateSandboxFromSnapshotParams(snapshot=config.DAYTONA_SNAPSHOT, ephemeral=True)
+            )
+            await _clone_repo(sandbox)
+            await _write_files(sandbox, files)
+            await sandbox.git.add("repo", ["."])
+            resp = await sandbox.git.commit(
+                path="repo", message=message, author=config.GITHUB_USER,
+                email=f"{config.GITHUB_USER}@users.noreply.github.com",
+            )
+            await sandbox.git.push(path="repo", username=config.GITHUB_USER, password=config.GITHUB_TOKEN)
+            # commit() response field name differs across SDKs; try common attrs
+            return getattr(resp, "sha", None) or getattr(resp, "hash", None)
+    except Exception:  # noqa: BLE001
+        return None
+    finally:
+        if sandbox is not None:
+            try:
+                await sandbox.delete()
+            except Exception:  # noqa: BLE001
+                pass
