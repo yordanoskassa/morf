@@ -20,9 +20,67 @@ export default function App() {
       <div className="pointer-events-none absolute -left-40 top-1/4 h-96 w-96 rounded-full bg-pink-500/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-40 bottom-1/4 h-96 w-96 rounded-full bg-rose-300/10 blur-3xl" />
 
-      {/* the stage — the app being built — fills the viewport */}
-      <div className="absolute inset-0">
-        <Stage />
+      {/* layout: header + sidebar + main */}
+      <div className="absolute inset-0 flex flex-col">
+        {/* header */}
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-white/60 px-4 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <span className="text-lg font-bold text-primary">M</span>
+            </div>
+            <span className="text-sm font-semibold">Morph Dashboard</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              placeholder="Search…"
+              className="h-8 w-56 rounded-lg border border-black/10 bg-white/50 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
+            />
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-black/5">
+              <span className="text-sm">🔔</span>
+            </button>
+            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+              U
+            </button>
+          </div>
+        </header>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* sidebar */}
+          <aside className="flex w-56 shrink-0 flex-col border-r border-black/10 bg-white/40 backdrop-blur-xl">
+            <nav className="flex-1 space-y-1 p-3">
+              {[
+                { icon: '📊', label: 'Dashboard', active: true },
+                { icon: '📈', label: 'Analytics', active: false },
+                { icon: '👥', label: 'Users', active: false },
+                { icon: '💰', label: 'Revenue', active: false },
+                { icon: '⚙️', label: 'Settings', active: false },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    item.active
+                      ? 'bg-primary/10 font-medium text-primary'
+                      : 'text-muted-foreground hover:bg-black/5 hover:text-foreground'
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </nav>
+            <div className="border-t border-black/10 p-3">
+              <div className="rounded-lg bg-white/50 p-3">
+                <div className="text-xs font-medium">Pro plan</div>
+                <div className="mt-1 text-[10px] text-muted-foreground">Upgrade for more features</div>
+              </div>
+            </div>
+          </aside>
+
+          {/* main content */}
+          <main className="flex-1 overflow-hidden">
+            <Stage />
+          </main>
+        </div>
       </div>
 
       {/* collapsible scoreboard, top-right */}
