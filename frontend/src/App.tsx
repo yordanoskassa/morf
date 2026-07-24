@@ -29,7 +29,7 @@ export default function App() {
       {/* layout: header + sidebar + main */}
       <div className="absolute inset-0 flex flex-col">
         {/* header */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-white/60 px-4 backdrop-blur-xl">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-white/85 px-4 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <span className="text-lg font-bold text-primary">M</span>
@@ -39,7 +39,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <input
               placeholder="Search…"
-              className="h-8 w-56 rounded-lg border border-black/10 bg-white/50 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
+              className="h-8 w-56 rounded-lg border border-black/15 bg-white/80 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
             />
             <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-black/5">
               <span className="text-sm">🔔</span>
@@ -52,7 +52,7 @@ export default function App() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* sidebar */}
-          <aside className="flex w-56 shrink-0 flex-col border-r border-black/10 bg-white/40 backdrop-blur-xl">
+          <aside className="flex w-56 shrink-0 flex-col border-r border-black/10 bg-white/75 backdrop-blur-xl">
             <nav className="flex-1 space-y-1 p-3">
               {[
                 { icon: '📊', label: 'Dashboard', active: true },
@@ -70,12 +70,12 @@ export default function App() {
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span className={item.label === 'Analytics' ? 'font-bold' : ''}>{item.label}</span>
+                  <span>{item.label}</span>
                 </button>
               ))}
             </nav>
             <div className="border-t border-black/10 p-3">
-              <div className="rounded-lg border border-blue-500/50 bg-white/50 p-3">
+              <div className="rounded-lg border border-blue-500/30 bg-white/80 p-3">
                 <div className="text-xs font-bold">Pro plan</div>
                 <div className="mt-1 text-[10px] font-bold text-muted-foreground">Upgrade for more features</div>
               </div>
