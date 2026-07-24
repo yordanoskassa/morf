@@ -85,6 +85,13 @@ function CandidateCard({ c, winner }: { c: CandidateResult; winner: boolean }) {
 
 type Dock = 'bottom' | 'left' | 'right' | 'free'
 
+// Locked high-contrast surface: an opaque dark panel that never takes on the stage
+// color, plus a double (black + white) ring so it stays legible on ANY background the
+// user morphs the stage to. Users can still restyle the chat explicitly.
+const SURFACE =
+  'bg-neutral-950/95 text-neutral-100 backdrop-blur-xl ' +
+  'shadow-[0_0_0_1px_rgba(0,0,0,0.9),0_0_0_2.5px_rgba(255,255,255,0.28),0_22px_60px_-12px_rgba(0,0,0,0.7)]'
+
 export function Chat() {
   const [turns, setTurns] = useState<Turn[]>([])
   const [input, setInput] = useState('')
@@ -187,7 +194,7 @@ export function Chat() {
         data-morph-chat
         onClick={() => setMinimized(false)}
         style={dockStyle}
-        className="fixed z-50 flex items-center gap-2 rounded-full border border-white/10 bg-background/70 px-4 py-2 text-sm font-medium shadow-2xl backdrop-blur-xl hover:bg-background/90"
+        className={`fixed z-50 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium hover:brightness-125 ${SURFACE}`}
       >
         <span className={`h-2 w-2 rounded-full ${busy ? 'animate-pulse bg-emerald-400' : 'bg-violet-400'}`} />
         morph
@@ -204,7 +211,7 @@ export function Chat() {
     >
       {/* expandable panel: live console + results, grows upward from the bar */}
       {open && turns.length > 0 && (
-        <div className="max-h-[45vh] overflow-auto rounded-2xl border border-white/10 bg-background/70 p-3 shadow-2xl backdrop-blur-xl">
+        <div className={`max-h-[45vh] overflow-auto rounded-2xl p-3 ${SURFACE}`}>
           <div className="space-y-3">
             {turns.map((t, i) => (
               <div key={i} className="space-y-2">
@@ -232,7 +239,7 @@ export function Chat() {
       {/* the one-line command bar */}
       <form
         onSubmit={(e) => { e.preventDefault(); send(input) }}
-        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-background/70 px-2 py-1.5 shadow-2xl backdrop-blur-xl"
+        className={`flex items-center gap-1.5 rounded-full px-2 py-1.5 ${SURFACE}`}
       >
         {/* drag handle */}
         <button type="button" onPointerDown={startDrag} title="drag to move"
@@ -264,7 +271,7 @@ export function Chat() {
         <button type="button" title="minimize" onClick={() => setMinimized(true)}
           className="rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-white/10 hover:text-foreground">—</button>
 
-        <Button type="submit" size="sm" className="h-8 rounded-full px-4">Morph</Button>
+        <Button type="submit" size="sm" className="h-8 rounded-full px-4 bg-[#39FF14] text-black shadow-[0_0_15px_#39FF14] hover:bg-[#39FF14]/90">Morph</Button>
       </form>
     </div>
   )

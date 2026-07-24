@@ -34,7 +34,12 @@ function VoiceButton({ onTranscript }: { onTranscript: (text: string) => void })
   }
 
   return (
-    <Button size="sm" variant={connected ? 'default' : 'outline'} onClick={toggle}>
+    <Button
+      size="sm"
+      variant={connected ? 'default' : 'outline'}
+      onClick={toggle}
+      className={connected ? undefined : 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white'}
+    >
       {connected ? (conv.isSpeaking ? '● speaking' : '● listening') : 'Talk'}
     </Button>
   )
