@@ -28,9 +28,10 @@ def log_morph(prompt: str, c: CandidateResult) -> str:
                 "total_ms": c.total_ms,
             },
             metadata={
+                "kind": "morph",          # distinguishes our spans from wrap_openai's raw LLM spans
                 "model": c.racer,
                 "model_id": c.model,
-                "edit_type": c.edit_type,
+                "edit_type": c.edit_type or "other",
                 "blocked": c.blocked,
             },
         )
@@ -61,13 +62,13 @@ async def scoreboard() -> ScoreboardResponse:
                avg(metrics.total_ms) AS p50_latency_ms,
                count(*) AS n
         FROM project_logs('{pid}')
-        WHERE created > now() - interval 1 day
+        WHERE created > now() - interval 1 day AND metadata.kind = 'morph'
         GROUP BY metadata.model, metadata.edit_type
     """
     ts_query = f"""
         SELECT created, metadata.model AS model, scores.undo AS undo
         FROM project_logs('{pid}')
-        WHERE created > now() - interval 1 day
+        WHERE created > now() - interval 1 day AND metadata.kind = 'morph'
         ORDER BY created ASC
         LIMIT 500
     """
