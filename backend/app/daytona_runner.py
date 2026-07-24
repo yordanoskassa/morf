@@ -12,6 +12,8 @@ from daytona import (
     AsyncDaytona,
     DaytonaConfig,
     CreateSandboxFromSnapshotParams,
+    CreateSandboxFromImageParams,
+    Resources,
     FileUpload,
     SessionExecuteRequest,
 )
@@ -33,6 +35,20 @@ class EvalOut:
 
 def _daytona() -> AsyncDaytona:
     return AsyncDaytona(DaytonaConfig(api_key=config.DAYTONA_API_KEY))
+
+
+async def _create(daytona, keep: bool):
+    """Create a sandbox from either a public image (default) or a warm snapshot."""
+    if config.DAYTONA_MODE == "snapshot":
+        return await daytona.create(CreateSandboxFromSnapshotParams(
+            snapshot=config.DAYTONA_SNAPSHOT, ephemeral=True, auto_stop_interval=0,
+        ))
+    return await daytona.create(CreateSandboxFromImageParams(
+        image=config.DAYTONA_IMAGE,
+        resources=Resources(cpu=2, memory=4, disk=8),
+        ephemeral=True,
+        auto_stop_interval=0,
+    ))
 
 
 def _repo_url_with_token() -> str:
@@ -61,17 +77,18 @@ async def evaluate(files: list[FileEdit]) -> EvalOut:
     sandbox = None
     try:
         async with daytona:
-            sandbox = await daytona.create(
-                CreateSandboxFromSnapshotParams(
-                    snapshot=config.DAYTONA_SNAPSHOT,
-                    ephemeral=True,
-                    auto_stop_interval=0,   # keep alive; dev server req doesn't reset the timer
-                )
-            )
+            sandbox = await _create(daytona, keep=False)
             await _clone_repo(sandbox)
             await _write_files(sandbox, files)
 
             app_dir = f"repo/{config.APP_SUBDIR}"
+
+            # --- install deps (skipped if a warm snapshot already has node_modules) ---
+            install = await sandbox.process.exec(config.INSTALL_CMD, cwd=app_dir, timeout=420)
+            if install.exit_code != 0:
+                out.build_log = (install.result or "")[-4000:]
+                out.error = "npm install failed"
+                return out
 
             # --- compile? ---
             t0 = time.perf_counter()
@@ -126,9 +143,7 @@ async def ship(files: list[FileEdit], message: str) -> str | None:
     sandbox = None
     try:
         async with daytona:
-            sandbox = await daytona.create(
-                CreateSandboxFromSnapshotParams(snapshot=config.DAYTONA_SNAPSHOT, ephemeral=True)
-            )
+            sandbox = await _create(daytona, keep=False)
             await _clone_repo(sandbox)
             await _write_files(sandbox, files)
             await sandbox.git.add("repo", ["."])

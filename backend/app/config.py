@@ -1,6 +1,14 @@
 """Central config + the 3-model panel. 🔒 immutable."""
 import os
+from pathlib import Path
 from dataclasses import dataclass
+
+# load backend/.env before any os.getenv below (config is imported first everywhere)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+except ImportError:
+    pass
 
 
 @dataclass(frozen=True)
@@ -37,8 +45,11 @@ BRAINTRUST_PROJECT = os.getenv("BRAINTRUST_PROJECT", "morph")
 BRAINTRUST_PROJECT_ID = os.getenv("BRAINTRUST_PROJECT_ID", "")  # needed for BTQL scoreboard
 
 DAYTONA_API_KEY = os.getenv("DAYTONA_API_KEY", "")
-# Prebuilt snapshot with node20 + the repo's npm deps already installed. Make once,
-# reuse for every morph so sandboxes start warm. See docs/ARCHITECTURE.md.
+# Sandbox base. mode "image" = create from a public Docker image each time (no setup,
+# node+npm+git included). mode "snapshot" = use a prebuilt warm snapshot (faster; make
+# once with node20 + deps baked in). Default image so it runs with zero pre-setup.
+DAYTONA_MODE = os.getenv("DAYTONA_MODE", "image")
+DAYTONA_IMAGE = os.getenv("DAYTONA_IMAGE", "node:20-bookworm")
 DAYTONA_SNAPSHOT = os.getenv("DAYTONA_SNAPSHOT", "morph-node20")
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
@@ -49,6 +60,7 @@ GITHUB_REPO = os.getenv("GITHUB_REPO", "")          # "owner/repo"
 GITHUB_USER = os.getenv("GITHUB_USER", "morph-bot")
 
 # How the app under edit is built / served inside the sandbox.
+INSTALL_CMD = os.getenv("INSTALL_CMD", "npm install --no-audit --no-fund")
 BUILD_CMD = os.getenv("BUILD_CMD", "npm run build")
 DEV_CMD = os.getenv("DEV_CMD", "npm run dev -- --host 0.0.0.0 --port 3000")
 DEV_PORT = int(os.getenv("DEV_PORT", "3000"))
