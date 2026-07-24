@@ -70,12 +70,12 @@ export default function App() {
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span className={item.label === 'Analytics' ? 'font-bold' : ''}>{item.label}</span>
+                  <span>{item.label}</span>
                 </button>
               ))}
             </nav>
             <div className="border-t border-black/10 p-3">
-              <div className="rounded-lg border border-blue-500/50 bg-white/50 p-3">
+              <div className="rounded-lg bg-white/50 p-3">
                 <div className="text-xs font-bold">Pro plan</div>
                 <div className="mt-1 text-[10px] font-bold text-muted-foreground">Upgrade for more features</div>
               </div>
