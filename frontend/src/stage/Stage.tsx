@@ -92,7 +92,7 @@ const regions = [
 ]
 
 const kpi = [
-  { label: 'Total users', value: '84.2K', change: '+12.5%', good: true, sparkline: [42, 45, 44, 48, 52, 58, 62] },
+  { label: 'Total users', value: '1000M', change: '+12.5%', good: true, sparkline: [42, 45, 44, 48, 52, 58, 62] },
   { label: 'Revenue', value: '$42.8K', change: '+8.2%', good: true, sparkline: [38, 40, 39, 42, 45, 48, 50] },
   { label: 'Churn', value: '2.4%', change: '-0.6%', good: true, sparkline: [3.2, 3.0, 2.9, 2.7, 2.6, 2.5, 2.4] },
   { label: 'Uptime', value: '99.99%', change: '+0.01%', good: true, sparkline: [99.95, 99.96, 99.97, 99.98, 99.98, 99.99, 99.99] },
