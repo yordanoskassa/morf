@@ -32,8 +32,14 @@ _SCHEMA = {
 }
 
 _SYSTEM = """You edit a Vite + React + TypeScript app that uses shadcn/ui components.
-You will be given the current contents of the app files and a change request.
-Return ONLY files you need to create or overwrite, with their COMPLETE new content.
+You will be given the current contents of the app files, a short history of recent
+changes, and a change request.
+
+Make SURGICAL edits. For each file, return a `search`/`replace` pair: `search` is an
+EXACT snippet copied verbatim from the current file (include enough surrounding lines to
+be unique), `replace` is what it becomes. Do NOT regenerate whole files. Use `content`
+(full file) ONLY when creating a brand-new file. Return the fewest edits that satisfy
+the request.
 
 You may edit ANY file under frontend/src — components, styles, the App shell, the chat
 itself. Mutability is a concept, not a partition. Only files under frontend/src are the
@@ -52,13 +58,14 @@ Other rules:
 Respond as JSON matching the schema."""
 
 
-def _build_user_prompt(prompt: str, focus: list[str]) -> str:
+def _build_user_prompt(prompt: str, focus: list[str], history: str) -> str:
     ctx = app_context(focus=focus)
     files_blob = "\n\n".join(f"=== {p} ===\n{c}" for p, c in ctx.items())
-    return f"# App files (you may edit any of these)\n{files_blob}\n\n# Change request\n{prompt}"
+    hist = f"# Recent changes (most recent last)\n{history}\n\n" if history else ""
+    return f"{hist}# App files (you may edit any of these)\n{files_blob}\n\n# Change request\n{prompt}"
 
 
-async def generate(racer: config.Racer, prompt: str, focus: list[str]) -> tuple[MorphPlan | None, int, str]:
+async def generate(racer: config.Racer, prompt: str, focus: list[str], history: str = "") -> tuple[MorphPlan | None, int, str]:
     """Run one racer. Returns (plan|None, gen_ms, error)."""
     t0 = time.perf_counter()
     try:
@@ -66,7 +73,7 @@ async def generate(racer: config.Racer, prompt: str, focus: list[str]) -> tuple[
             model=racer.model,
             messages=[
                 {"role": "system", "content": _SYSTEM},
-                {"role": "user", "content": _build_user_prompt(prompt, focus)},
+                {"role": "user", "content": _build_user_prompt(prompt, focus, history)},
             ],
             response_format={"type": "json_schema", "json_schema": _SCHEMA},
             temperature=0.2,
@@ -81,7 +88,7 @@ async def generate(racer: config.Racer, prompt: str, focus: list[str]) -> tuple[
         return None, gen_ms, f"{type(e).__name__}: {e}"
 
 
-async def race(prompt: str, focus: list[str]) -> list[tuple[config.Racer, MorphPlan | None, int, str]]:
+async def race(prompt: str, focus: list[str], history: str = "") -> list[tuple[config.Racer, MorphPlan | None, int, str]]:
     """Fan out to all 3 racers concurrently."""
-    results = await asyncio.gather(*(generate(r, prompt, focus) for r in config.RACERS))
+    results = await asyncio.gather(*(generate(r, prompt, focus, history) for r in config.RACERS))
     return [(r, *res) for r, res in zip(config.RACERS, results)]

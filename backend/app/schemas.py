@@ -4,16 +4,19 @@ from pydantic import BaseModel, Field
 
 
 class FileEdit(BaseModel):
-    """A single file the morph rewrites (full new content — no fragile patches)."""
-    path: str = Field(description="repo-relative path, e.g. frontend/src/mutable/App.tsx")
-    content: str = Field(description="the complete new file content")
+    """A surgical edit to a file. Prefer search/replace for existing files; use `content`
+    only to create a new file or fully rewrite one."""
+    path: str = Field(description="repo-relative path, e.g. frontend/src/stage/Stage.tsx")
+    search: str | None = Field(default=None, description="exact existing snippet to find (verbatim, enough lines to be unique)")
+    replace: str | None = Field(default=None, description="what to replace the search snippet with")
+    content: str | None = Field(default=None, description="full file content — ONLY for a new file or a full rewrite")
 
 
 class MorphPlan(BaseModel):
     """What a model returns for a prompt. Enforced via Fireworks json_schema mode."""
     edit_type: str = Field(description="one of: style, layout, component, feature, copy, fix, other")
     summary: str = Field(description="one-line description of the change")
-    files: list[FileEdit] = Field(description="files to create or overwrite")
+    files: list[FileEdit] = Field(description="the edits to make — prefer minimal search/replace edits")
 
 
 class MorphRequest(BaseModel):

@@ -1,10 +1,52 @@
 """Orchestrates one morph: guard -> race 3 models -> sandbox each -> score -> ship. 🔒 immutable."""
 from __future__ import annotations
 import asyncio
+from collections import deque
 
 from . import config, models, daytona_runner, braintrust_logger
 from .immutable_guard import check_files, is_kernel, in_app, REPO_ROOT
 from .schemas import MorphRequest, MorphResponse, CandidateResult, MorphPlan, FileEdit
+
+
+# --- conversation memory: a rolling one-line log of recent morphs (cheap on context) ---
+_HISTORY: deque = deque(maxlen=8)
+
+
+def _history_text() -> str:
+    return "\n".join(f"- \"{h['prompt']}\" → {h['outcome']}" for h in _HISTORY)
+
+
+def _remember(prompt: str, winner: CandidateResult | None) -> None:
+    outcome = f"shipped by {winner.racer} ({winner.summary})" if winner else "no candidate survived"
+    _HISTORY.append({"prompt": prompt, "outcome": outcome})
+
+
+def _resolve_files(plan: MorphPlan) -> list[FileEdit]:
+    """Turn the model's surgical edits into full-content files by applying search/replace
+    against the current local files. Raises on a search miss (candidate then fails)."""
+    by_path: dict[str, list[FileEdit]] = {}
+    for e in plan.files:
+        by_path.setdefault(e.path, []).append(e)
+
+    resolved: list[FileEdit] = []
+    for path in dict.fromkeys(e.path for e in plan.files):  # preserve first-seen order
+        p = REPO_ROOT / path
+        content = p.read_text() if p.exists() else None
+        for e in by_path[path]:
+            if e.search is None and e.content is not None:
+                content = e.content                       # new file / full rewrite
+            elif e.search is not None:
+                if content is None:
+                    raise ValueError(f"search edit on missing file {path}")
+                if e.search not in content:
+                    raise ValueError(f"search snippet not found in {path}")
+                content = content.replace(e.search, e.replace or "", 1)
+            else:
+                raise ValueError(f"empty edit for {path}")
+        if content is None:
+            raise ValueError(f"no content produced for {path}")
+        resolved.append(FileEdit(path=path, content=content))
+    return resolved
 
 
 def _apply_local(files: list[FileEdit]) -> None:
@@ -47,7 +89,14 @@ async def _run_candidate(prompt: str, racer, plan: MorphPlan | None, gen_ms: int
         c.total_ms = gen_ms
         return c
 
-    ev = await daytona_runner.evaluate(plan.files)
+    try:
+        resolved = _resolve_files(plan)
+    except Exception as e:  # noqa: BLE001
+        c.blocked, c.blocked_reason, c.total_ms = True, f"edit did not apply: {e}", gen_ms
+        return c
+    c.files = resolved
+
+    ev = await daytona_runner.evaluate(resolved)
     c.compiled, c.rendered, c.chat_ok = ev.compiled, ev.rendered, ev.chat_ok
     c.build_ms, c.render_ms = ev.build_ms, ev.render_ms
     c.build_log, c.preview_url = ev.build_log, ev.preview_url
@@ -57,8 +106,8 @@ async def _run_candidate(prompt: str, racer, plan: MorphPlan | None, gen_ms: int
 
 
 async def run_morph(req: MorphRequest) -> MorphResponse:
-    # 1. race the 3 models
-    raced = await models.race(req.prompt, req.focus)
+    # 1. race the 3 models (with a short memory of recent changes)
+    raced = await models.race(req.prompt, req.focus, _history_text())
 
     # warm the baked image once so concurrent sandbox creates don't race the build
     await daytona_runner.ensure_warm()
@@ -91,15 +140,16 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
         sha = await daytona_runner.ship(winner.files, message=f"morph: {winner.summary}")
         resp.shipped = sha is not None
         resp.commit_sha = sha
+    _remember(req.prompt, winner)
     return resp
 
 
 # ----------------------------------------------------------------------------
 # Streaming variant — emits detailed live progress events (for the log console).
 # ----------------------------------------------------------------------------
-async def _candidate_stream(emit, racer, prompt: str, focus: list[str]) -> CandidateResult:
+async def _candidate_stream(emit, racer, prompt: str, focus: list[str], history: str) -> CandidateResult:
     await emit({"type": "gen_start", "racer": racer.key, "role": racer.role})
-    plan, gen_ms, err = await models.generate(racer, prompt, focus)
+    plan, gen_ms, err = await models.generate(racer, prompt, focus, history)
     if plan is None:
         await emit({"type": "gen_fail", "racer": racer.key, "gen_ms": gen_ms, "error": err})
         c = CandidateResult(racer=racer.key, model=racer.model, edit_type="other",
@@ -119,10 +169,19 @@ async def _candidate_stream(emit, racer, prompt: str, focus: list[str]) -> Candi
         await emit({"type": "blocked", "racer": racer.key, "reason": reason})
         return c
 
+    # apply the surgical edits against current files → full-content files to build
+    try:
+        resolved = _resolve_files(plan)
+    except Exception as e:  # noqa: BLE001 — bad search snippet etc → candidate fails
+        c.blocked, c.blocked_reason, c.total_ms = True, f"edit did not apply: {e}", gen_ms
+        await emit({"type": "blocked", "racer": racer.key, "reason": c.blocked_reason})
+        return c
+    c.files = resolved
+
     async def emit_step(phase: str, detail: str = ""):
         await emit({"type": "step", "racer": racer.key, "phase": phase, "detail": detail})
 
-    ev = await daytona_runner.evaluate(plan.files, emit_step=emit_step)
+    ev = await daytona_runner.evaluate(resolved, emit_step=emit_step)
     c.compiled, c.rendered, c.chat_ok = ev.compiled, ev.rendered, ev.chat_ok
     c.build_ms, c.render_ms = ev.build_ms, ev.render_ms
     c.build_log, c.preview_url = ev.build_log, ev.preview_url
@@ -149,8 +208,9 @@ async def run_morph_stream(req: MorphRequest):
             if not daytona_runner.is_warm():
                 await emit({"type": "warming", "detail": "warming the sandbox image (first run only)"})
                 await daytona_runner.ensure_warm()
+            hist = _history_text()
             cands = await asyncio.gather(
-                *(_candidate_stream(emit, r, req.prompt, req.focus) for r in config.RACERS)
+                *(_candidate_stream(emit, r, req.prompt, req.focus, hist) for r in config.RACERS)
             )
             eligible = [c for c in cands if c.compiled and c.rendered and c.chat_ok and not c.blocked]
             winner = max(eligible, key=_composite) if eligible else None
@@ -176,6 +236,7 @@ async def run_morph_stream(req: MorphRequest):
             else:
                 await emit({"type": "no_winner", "detail": "no candidate compiled + rendered + kept the chat"})
 
+            _remember(req.prompt, winner)
             await emit({"type": "done", "result": resp.model_dump()})
         except Exception as e:  # noqa: BLE001
             await emit({"type": "error", "error": f"{type(e).__name__}: {e}"})
