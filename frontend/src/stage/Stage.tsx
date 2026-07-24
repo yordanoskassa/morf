@@ -160,7 +160,7 @@ export default function Stage() {
       {/* top nav */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Hello Morph</h1>
           <p className="text-sm text-muted-foreground">Real-time product health, traffic, revenue, and operations.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
