@@ -87,3 +87,98 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
         resp.shipped = sha is not None
         resp.commit_sha = sha
     return resp
+
+
+# ----------------------------------------------------------------------------
+# Streaming variant — emits detailed live progress events (for the log console).
+# ----------------------------------------------------------------------------
+async def _candidate_stream(emit, racer, prompt: str, focus: list[str]) -> CandidateResult:
+    await emit({"type": "gen_start", "racer": racer.key, "role": racer.role})
+    plan, gen_ms, err = await models.generate(racer, prompt, focus)
+    if plan is None:
+        await emit({"type": "gen_fail", "racer": racer.key, "gen_ms": gen_ms, "error": err})
+        c = CandidateResult(racer=racer.key, model=racer.model, edit_type="other",
+                            summary=f"model error: {err}", files=[], gen_ms=gen_ms)
+        c.total_ms = gen_ms
+        return c
+
+    await emit({"type": "gen_done", "racer": racer.key, "gen_ms": gen_ms,
+                "edit_type": plan.edit_type, "summary": plan.summary,
+                "files": [f.path for f in plan.files]})
+    c = CandidateResult(racer=racer.key, model=racer.model, edit_type=plan.edit_type,
+                        summary=plan.summary, files=plan.files, gen_ms=gen_ms)
+
+    ok, reason = check_files([f.path for f in plan.files])
+    if not ok:
+        c.blocked, c.blocked_reason, c.total_ms = True, reason, gen_ms
+        await emit({"type": "blocked", "racer": racer.key, "reason": reason})
+        return c
+
+    async def emit_step(phase: str, detail: str = ""):
+        await emit({"type": "step", "racer": racer.key, "phase": phase, "detail": detail})
+
+    ev = await daytona_runner.evaluate(plan.files, emit_step=emit_step)
+    c.compiled, c.rendered, c.chat_ok = ev.compiled, ev.rendered, ev.chat_ok
+    c.build_ms, c.render_ms = ev.build_ms, ev.render_ms
+    c.build_log, c.preview_url = ev.build_log, ev.preview_url
+    c.total_ms = gen_ms + ev.build_ms + ev.render_ms
+    c.score = _composite(c)
+    await emit({"type": "eval_done", "racer": racer.key, "compiled": c.compiled,
+                "rendered": c.rendered, "chat_ok": c.chat_ok, "total_ms": c.total_ms,
+                "preview_url": c.preview_url, "score": c.score})
+    return c
+
+
+async def run_morph_stream(req: MorphRequest):
+    """Async generator of progress events. Terminates with a 'done' event carrying
+    the full MorphResponse."""
+    q: asyncio.Queue = asyncio.Queue()
+
+    async def emit(ev: dict):
+        await q.put(ev)
+
+    async def orchestrate():
+        try:
+            await emit({"type": "start", "prompt": req.prompt,
+                        "racers": [{"key": r.key, "role": r.role} for r in config.RACERS]})
+            cands = await asyncio.gather(
+                *(_candidate_stream(emit, r, req.prompt, req.focus) for r in config.RACERS)
+            )
+            for c in cands:
+                try:
+                    c.span_id = braintrust_logger.log_morph(req.prompt, c)
+                except Exception:  # noqa: BLE001
+                    c.span_id = None
+
+            eligible = [c for c in cands if c.compiled and c.rendered and c.chat_ok and not c.blocked]
+            winner = max(eligible, key=_composite) if eligible else None
+            resp = MorphResponse(winner=winner, candidates=sorted(cands, key=_composite, reverse=True))
+
+            if winner is not None:
+                await emit({"type": "winner", "racer": winner.racer, "summary": winner.summary,
+                            "total_ms": winner.total_ms})
+                _apply_local(winner.files)
+                await emit({"type": "applied", "detail": "written locally — HMR reloading"})
+                await emit({"type": "shipping", "detail": "pushing to GitHub"})
+                sha = await daytona_runner.ship(winner.files, message=f"morph: {winner.summary}")
+                resp.shipped, resp.commit_sha = sha is not None, sha
+                await emit({"type": "shipped", "commit_sha": sha, "ok": sha is not None})
+            else:
+                await emit({"type": "no_winner", "detail": "no candidate compiled + rendered + kept the chat"})
+
+            await emit({"type": "done", "result": resp.model_dump()})
+        except Exception as e:  # noqa: BLE001
+            await emit({"type": "error", "error": f"{type(e).__name__}: {e}"})
+        finally:
+            await q.put(None)
+
+    task = asyncio.create_task(orchestrate())
+    try:
+        while True:
+            ev = await q.get()
+            if ev is None:
+                break
+            yield ev
+    finally:
+        if not task.done():
+            task.cancel()

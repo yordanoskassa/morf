@@ -73,36 +73,51 @@ async def _write_files(sandbox, files: list[FileEdit], root: str = "repo") -> No
     await sandbox.fs.upload_files(uploads)
 
 
-async def evaluate(files: list[FileEdit]) -> EvalOut:
-    """Spin an ephemeral sandbox, apply files, build + render-check. Always cleaned up."""
+async def evaluate(files: list[FileEdit], emit_step=None) -> EvalOut:
+    """Spin an ephemeral sandbox, apply files, build + render-check. Always cleaned up.
+
+    emit_step(phase, detail) is an optional async callback for live progress logs.
+    """
+    async def step(phase: str, detail: str = ""):
+        if emit_step:
+            await emit_step(phase, detail)
+
     out = EvalOut()
     daytona = _daytona()
     sandbox = None
     try:
         async with daytona:
+            await step("sandbox", "spinning up node:20 sandbox")
             sandbox = await _create(daytona, keep=False)
+            await step("clone", "cloning the repo")
             await _clone_repo(sandbox)
             await _write_files(sandbox, files)
 
             app_dir = f"repo/{config.APP_SUBDIR}"
 
             # --- install deps (skipped if a warm snapshot already has node_modules) ---
+            await step("install", "npm install")
             install = await sandbox.process.exec(config.INSTALL_CMD, cwd=app_dir, timeout=420)
             if install.exit_code != 0:
                 out.build_log = (install.result or "")[-4000:]
                 out.error = "npm install failed"
+                await step("install_failed", "npm install failed")
                 return out
 
             # --- compile? ---
+            await step("build", "tsc + vite build")
             t0 = time.perf_counter()
             build = await sandbox.process.exec(config.BUILD_CMD, cwd=app_dir, timeout=300)
             out.build_ms = int((time.perf_counter() - t0) * 1000)
             out.build_log = (build.result or "")[-4000:]
             out.compiled = build.exit_code == 0
             if not out.compiled:
+                await step("build_failed", f"did not compile ({out.build_ms}ms)")
                 return out
+            await step("compiled", f"compiled in {out.build_ms}ms")
 
             # --- render? --- start dev server, poll the public preview URL for 200
+            await step("serve", "starting dev server")
             t1 = time.perf_counter()
             await sandbox.process.create_session("dev")
             await sandbox.process.execute_session_command(
@@ -112,11 +127,17 @@ async def evaluate(files: list[FileEdit]) -> EvalOut:
             preview = await sandbox.get_preview_link(config.DEV_PORT)
             out.preview_url = preview.url
             headers = {"x-daytona-preview-token": preview.token} if preview.token else {}
+            await step("render", "probing preview URL")
             out.rendered = await _probe(preview.url, headers)
             out.render_ms = int((time.perf_counter() - t1) * 1000)
+            await step("rendered" if out.rendered else "render_failed",
+                       f"{'rendered' if out.rendered else 'no render'} ({out.render_ms}ms)")
 
             # --- chat survives? every anchor must still be present in the app source ---
+            await step("chat_check", "verifying the chat survived")
             out.chat_ok = await _anchors_present(sandbox, f"repo/{config.APP_SUBDIR}/src")
+            await step("chat_ok" if out.chat_ok else "chat_broken",
+                       "chat survived" if out.chat_ok else "chat was removed/broken")
             return out
     except Exception as e:  # noqa: BLE001
         out.error = f"{type(e).__name__}: {e}"

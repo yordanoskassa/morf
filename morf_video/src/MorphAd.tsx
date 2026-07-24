@@ -115,7 +115,7 @@ type Tool = { img: string; name: string; use: string; h: number };
 const TOOLS: Tool[] = [
   { img: "logos/fireworks.png", name: "Fireworks", use: "3 open models race", h: 84 },
   { img: "logos/daytona.svg", name: "Daytona", use: "each build in a sandbox", h: 92 },
-  { img: "logos/braintrust.png", name: "Braintrust", use: "every attempt, scored", h: 90 },
+  { img: "logos/braintrust.png", name: "Braintrust", use: "scores it so nothing breaks", h: 90 },
   { img: "logos/elevenlabs.svg", name: "ElevenLabs", use: "talk to it out loud", h: 74 },
 ];
 

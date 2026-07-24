@@ -40,7 +40,7 @@ export function Scoreboard() {
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-auto p-4">
-      <Card>
+      <Card className="border-white/10 bg-white/5">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center justify-between text-sm">
             Morph quality
@@ -67,7 +67,7 @@ export function Scoreboard() {
         </CardContent>
       </Card>
 
-      <Card className="flex-1">
+      <Card className="flex-1 border-white/10 bg-white/5">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Which model wins which edit</CardTitle>
         </CardHeader>

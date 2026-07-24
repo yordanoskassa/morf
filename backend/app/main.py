@@ -1,10 +1,12 @@
 """FastAPI entry. Routes: /morph /undo /scoreboard /voice/signed-url. 🔒 immutable."""
 from __future__ import annotations
+import json
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from . import braintrust_logger, elevenlabs_voice
-from .morph_engine import run_morph
+from .morph_engine import run_morph, run_morph_stream
 from .schemas import MorphRequest, MorphResponse, UndoRequest, ScoreboardResponse
 
 app = FastAPI(title="Morph — a coding chat that builds itself")
@@ -26,6 +28,19 @@ async def health() -> dict:
 async def morph(req: MorphRequest) -> MorphResponse:
     """Race 3 models to satisfy the prompt, sandbox-test each, ship the winner."""
     return await run_morph(req)
+
+
+@app.post("/morph/stream")
+async def morph_stream(req: MorphRequest) -> StreamingResponse:
+    """Same as /morph but streams detailed live progress as Server-Sent Events.
+    Terminates with a 'done' event carrying the full result."""
+    async def gen():
+        async for ev in run_morph_stream(req):
+            yield f"data: {json.dumps(ev)}\n\n"
+    return StreamingResponse(gen(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    })
 
 
 @app.post("/undo")
