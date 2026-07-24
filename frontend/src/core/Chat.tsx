@@ -264,7 +264,7 @@ export function Chat() {
         <button type="button" title="minimize" onClick={() => setMinimized(true)}
           className="rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-white/10 hover:text-foreground">—</button>
 
-        <Button type="submit" size="sm" className="h-8 rounded-full px-4">Morph</Button>
+        <Button type="submit" size="sm" className="h-8 rounded-full px-4 bg-[#39FF14] text-black shadow-[0_0_15px_#39FF14] hover:bg-[#39FF14]/90">Morph</Button>
       </form>
     </div>
   )
