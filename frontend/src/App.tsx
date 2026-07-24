@@ -34,7 +34,7 @@ export default function App() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <span className="text-lg font-bold text-primary">M</span>
             </div>
-            <span className="text-sm font-semibold">Morf Dashboard</span>
+            <span className="text-sm font-semibold">this could be anything</span>
           </div>
           <div className="flex items-center gap-2">
             <input
