@@ -202,12 +202,16 @@ export function Chat() {
       style={dockStyle}
       className="fixed z-50 flex w-[min(680px,calc(100vw-2rem))] flex-col gap-2"
     >
-      {/* floating pixel wordmark (Jersey 15) — same font as the launch video */}
-      <div
-        className="pointer-events-none select-none text-center leading-none text-white"
-        style={{ fontFamily: '"Jersey 15", monospace', letterSpacing: '0.01em', textShadow: '0 0 14px rgba(255,255,255,0.35)' }}
-      >
-        <span className="text-3xl">morph</span>
+      {/* floating pixel wordmark (Jersey 15) — same font as the launch video.
+          data-morph-logo is a survival anchor: morphs may restyle it, never remove it. */}
+      <div className="flex justify-center">
+        <div
+          data-morph-logo
+          className="pointer-events-none select-none rounded-xl border border-white/15 bg-neutral-950/85 px-4 py-1 leading-none text-white shadow-lg backdrop-blur-xl"
+          style={{ fontFamily: '"Jersey 15", monospace', letterSpacing: '0.02em', textShadow: '0 0 14px rgba(255,255,255,0.35)' }}
+        >
+          <span className="text-3xl">morph</span>
+        </div>
       </div>
 
       {/* expandable panel: live console + results, grows upward from the bar */}

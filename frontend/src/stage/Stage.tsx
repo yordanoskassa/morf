@@ -46,17 +46,17 @@ const revenue = [
 ]
 
 const distribution = [
-  { name: 'Direct', value: 35, color: '#ec4899' },
-  { name: 'Social', value: 25, color: '#f472b6' },
-  { name: 'Organic', value: 30, color: '#db2777' },
-  { name: 'Referral', value: 10, color: '#fda4af' },
+  { name: 'Direct', value: 35, color: '#808000' },
+  { name: 'Social', value: 25, color: '#9aa83a' },
+  { name: 'Organic', value: 30, color: '#5c6b12' },
+  { name: 'Referral', value: 10, color: '#b5c24a' },
 ]
 
 const funnel = [
-  { name: 'Visitors', value: 12400, fill: '#ec4899' },
-  { name: 'Signups', value: 6200, fill: '#f472b6' },
-  { name: 'Activated', value: 3100, fill: '#db2777' },
-  { name: 'Paid', value: 1240, fill: '#be185d' },
+  { name: 'Visitors', value: 12400, fill: '#808000' },
+  { name: 'Signups', value: 6200, fill: '#9aa83a' },
+  { name: 'Activated', value: 3100, fill: '#5c6b12' },
+  { name: 'Paid', value: 1240, fill: '#4a5a0a' },
 ]
 
 const recent = [
@@ -136,7 +136,7 @@ function StatusBadge({ status }: { status: string }) {
   if (status === 'completed') return <Badge className="bg-emerald-600">completed</Badge>
   if (status === 'pending') return <Badge variant="secondary">pending</Badge>
   if (status === 'failed') return <Badge variant="destructive">failed</Badge>
-  if (status === 'success') return <Badge className="bg-pink-600">success</Badge>
+  if (status === 'success') return <Badge className="bg-lime-700">success</Badge>
   if (status === 'warning') return <Badge variant="secondary">warning</Badge>
   if (status === 'error') return <Badge variant="destructive">error</Badge>
   return <Badge variant="outline">{status}</Badge>
@@ -197,7 +197,7 @@ export default function Stage() {
                   <CardDescription>{k.label}</CardDescription>
                   <CardTitle className="text-2xl">{k.value}</CardTitle>
                 </div>
-                <Sparkline data={k.sparkline} color="#ec4899" />
+                <Sparkline data={k.sparkline} color="#808000" />
               </div>
             </CardHeader>
             <CardContent>
@@ -229,12 +229,12 @@ export default function Stage() {
                   <AreaChart data={traffic} margin={{ top: 8, right: 16, bottom: 0, left: -20 }}>
                     <defs>
                       <linearGradient id="visits" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ec4899" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#808000" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#808000" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="unique" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f472b6" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#f472b6" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#9aa83a" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#9aa83a" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
@@ -247,8 +247,8 @@ export default function Stage() {
                         borderRadius: '0.5rem',
                       }}
                     />
-                    <Area type="monotone" dataKey="visits" stroke="#ec4899" strokeWidth={2} fill="url(#visits)" />
-                    <Area type="monotone" dataKey="unique" stroke="#f472b6" strokeWidth={2} fill="url(#unique)" />
+                    <Area type="monotone" dataKey="visits" stroke="#808000" strokeWidth={2} fill="url(#visits)" />
+                    <Area type="monotone" dataKey="unique" stroke="#9aa83a" strokeWidth={2} fill="url(#unique)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -274,7 +274,7 @@ export default function Stage() {
                         borderRadius: '0.5rem',
                       }}
                     />
-                    <Bar dataKey="value" fill="#ec4899" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="value" fill="#808000" radius={[6, 6, 0, 0]} />
                     <Line type="monotone" dataKey="mrr" stroke="#fbbf24" strokeWidth={2} dot={false} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -380,7 +380,7 @@ export default function Stage() {
                       <span className="text-muted-foreground">{g.target}</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-pink-500" style={{ width: `${g.current}%` }} />
+                      <div className="h-full rounded-full bg-lime-700" style={{ width: `${g.current}%` }} />
                     </div>
                     <div className="text-right text-[10px] text-muted-foreground">{g.current}%</div>
                   </div>
@@ -453,7 +453,7 @@ export default function Stage() {
                     <div className="text-sm font-medium">{r.region}</div>
                     <div className="text-xs text-muted-foreground">{r.users} users · {r.growth}</div>
                   </div>
-                  <div className="h-8 w-8 rounded-full border-4 border-pink-500/30 border-t-pink-500" style={{ transform: `rotate(${r.share * 3.6}deg)` }} />
+                  <div className="h-8 w-8 rounded-full border-4 border-lime-700/30 border-t-lime-700" style={{ transform: `rotate(${r.share * 3.6}deg)` }} />
                 </div>
               ))}
             </div>
@@ -475,7 +475,7 @@ export default function Stage() {
                     </div>
                     <div className="text-[10px] text-muted-foreground">{m.role}</div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div className={`h-full rounded-full ${m.load > 80 ? 'bg-rose-400' : 'bg-pink-500'}`} style={{ width: `${m.load}%` }} />
+                      <div className={`h-full rounded-full ${m.load > 80 ? 'bg-amber-500' : 'bg-lime-700'}`} style={{ width: `${m.load}%` }} />
                     </div>
                   </div>
                 ))}
@@ -493,11 +493,11 @@ export default function Stage() {
               <div key={s.name} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
                   <span>{s.name}</span>
-                  <span className={s.status === 'Operational' ? 'text-pink-400' : 'text-rose-300'}>{s.status}</span>
+                  <span className={s.status === 'Operational' ? 'text-lime-600' : 'text-amber-600'}>{s.status}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full ${s.status === 'Operational' ? 'bg-pink-500' : 'bg-rose-400'}`}
+                    className={`h-full rounded-full ${s.status === 'Operational' ? 'bg-lime-700' : 'bg-amber-500'}`}
                     style={{ width: `${s.load}%` }}
                   />
                 </div>

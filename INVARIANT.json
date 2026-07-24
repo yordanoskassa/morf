@@ -18,7 +18,7 @@
   ],
   "app_root": "frontend/src",
   "chat_survival": {
-    "anchors": ["data-morph-chat", "/morph"],
-    "note": "The post-morph source under app_root must still contain these strings, or the chat is considered removed/broken and the candidate is rejected."
+    "anchors": ["data-morph-chat", "data-morph-logo", "/morph"],
+    "note": "The post-morph source under app_root must still contain these strings, or the chat/logo is considered removed and the candidate is rejected. Morphs may restyle them, never remove them."
   }
 }

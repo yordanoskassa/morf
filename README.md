@@ -38,12 +38,29 @@ npm run dev                  # http://localhost:3000
 ```
 
 ## Deploy
-- Backend → EasyPanel from the root `Dockerfile`. Set all env vars.
-- Frontend → `npm run build`, serve `dist/` (EasyPanel static service).
+
+### Backend → EasyPanel
+1. Create an **App** from this GitHub repo.
+2. Build with the root `Dockerfile` (context = repo root).
+3. Expose port **8000** (or set `PORT` — the image respects it).
+4. Health check path: `/health`.
+5. Copy every key from `backend/.env.example` into EasyPanel **Environment** (do not bake `.env` into the image).
+
+### Frontend → Netlify
+1. New site from this GitHub repo. `netlify.toml` already sets:
+   - base: `frontend`
+   - build: `npm run build`
+   - publish: `dist`
+2. In Netlify env, set:
+   ```
+   VITE_API_BASE=https://YOUR-EASYPANEL-BACKEND-URL
+   ```
+   (no trailing slash). Redeploy after changing it — Vite inlines this at build time.
+3. Open the Netlify URL; the UI talks to EasyPanel over CORS (`allow_origins=["*"]`).
 
 ## What you still need to wire
-1. Real keys in `backend/.env` (Daytona, Braintrust, Fireworks, ElevenLabs, GitHub PAT).
-2. `GITHUB_REPO` = the repo Daytona pushes morphs to (this repo, once pushed to GitHub).
-3. A Daytona snapshot `morph-node20` with node 20 + the frontend deps pre-installed (warm starts).
+1. Real keys in EasyPanel env (Daytona, Braintrust, Fireworks, GitHub PAT, Mongo, optional ElevenLabs).
+2. `GITHUB_REPO` = the repo Daytona pushes morphs to (this repo).
+3. Optional: Daytona snapshot `morph-node20` + `DAYTONA_MODE=snapshot` for warmer starts.
 4. `BRAINTRUST_PROJECT_ID` for the scoreboard BTQL query.
-5. An ElevenLabs agent id + (optional) a webhook tool pointed at `POST /morph`.
+5. ElevenLabs agent id if you want voice.

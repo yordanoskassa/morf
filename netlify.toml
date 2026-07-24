@@ -1,0 +1,23 @@
+# Frontend → Netlify. Backend stays on EasyPanel.
+# In Netlify UI set:
+#   VITE_API_BASE = https://<your-easypanel-backend-url>
+# (no trailing slash)
+
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback (safe even without a client router)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

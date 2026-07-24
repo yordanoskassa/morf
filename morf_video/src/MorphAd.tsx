@@ -96,11 +96,11 @@ const StatueBeat: React.FC = () => {
             maxWidth: 720,
           }}
         >
-          <div style={{ fontFamily: pixelFont, fontSize: 96, color: theme.ink, lineHeight: 1.05 }}>
-            software that
+          <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
+            prove it,
           </div>
-          <div style={{ fontFamily: pixelFont, fontSize: 96, color: theme.ink, lineHeight: 1.05 }}>
-            builds itself.
+          <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
+            then build it.
           </div>
         </div>
       </AbsoluteFill>
@@ -178,6 +178,98 @@ const ToolsBeat: React.FC = () => {
 /* ========================================================================== */
 /* INTRO + OUTRO                                                              */
 /* ========================================================================== */
+/* ========================================================================== */
+/* PER-TOOL BEATS — each tool shown one at a time, in the flow                */
+/* ========================================================================== */
+const ToolBeat: React.FC<{
+  img: string;
+  logoH: number;
+  lines: (string | { text: string; accent?: boolean; soft?: boolean })[];
+  fontSize: number;
+}> = ({ img, logoH, lines, fontSize }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const s = spring({ frame, fps, config: { damping: 200, stiffness: 60 } });
+  const rise = interpolate(s, [0, 1], [26, 0]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 54 }}>
+      <div
+        style={{
+          opacity: s,
+          transform: `translateY(${rise}px)`,
+          height: logoH,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <Img src={staticFile(img)} style={{ height: logoH }} />
+      </div>
+      <Statement lines={lines} fontSize={fontSize} startFrame={8} />
+    </div>
+  );
+};
+
+/* Daytona spotlight — logo inside a live "sandbox" window with a running dot */
+const DaytonaBeat: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const s = spring({ frame, fps, config: { damping: 200, stiffness: 55 } });
+  const rise = interpolate(s, [0, 1], [30, 0]);
+  const running = Math.floor(frame / 18) % 2 === 0;
+  const dot = (o: number) => (
+    <span style={{ width: 16, height: 16, borderRadius: 99, background: theme.ink, opacity: o }} />
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 58 }}>
+      <div style={{ opacity: s, transform: `translateY(${rise}px)` }}>
+        <div
+          style={{
+            border: `3px solid ${theme.ink}`,
+            borderRadius: 16,
+            overflow: "hidden",
+            background: "#ffffff",
+            boxShadow: "0 26px 70px rgba(0,0,0,0.12)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "18px 24px",
+              borderBottom: `3px solid ${theme.ink}`,
+            }}
+          >
+            {dot(0.22)}
+            {dot(0.22)}
+            {dot(0.22)}
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              <span
+                style={{
+                  width: 15,
+                  height: 15,
+                  borderRadius: 99,
+                  background: theme.accent,
+                  opacity: running ? 1 : 0.25,
+                }}
+              />
+              <span style={{ fontFamily: pixelFont, fontSize: 24, color: theme.inkSoft }}>running</span>
+            </span>
+          </div>
+          <div style={{ padding: "58px 120px", display: "flex", justifyContent: "center" }}>
+            <Img src={staticFile("logos/daytona.svg")} style={{ height: 150 }} />
+          </div>
+        </div>
+      </div>
+      <Statement
+        lines={["each build runs live —", "a real app in seconds."]}
+        fontSize={78}
+        startFrame={10}
+      />
+    </div>
+  );
+};
+
 const IntroBeat: React.FC = () => (
   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 46 }}>
     <Wordmark fontSize={230} startFrame={6}>
@@ -219,18 +311,21 @@ export const MorphAd: React.FC = () => {
     return { from, len };
   };
 
-  const intro = at(120);
-  const s1 = at(118);
-  const statue = at(180);
-  const s2 = at(118);
-  const s3 = at(118);
-  const s4 = at(122);
-  const tools = at(190); // real logos + how we use them
-  const s5 = at(124);
-  const s6 = at(124);
-  const outro = at(150);
+  // ---- the arc ----------------------------------------------------------
+  const intro = at(115); //  morf
+  const domain = at(106); //  your software, any domain            (universal)
+  const req = at(110); //  users keep requesting features        (the asks)
+  const waste = at(122); //  devs build them — most flop           (the waste / no ROI)
+  const statue = at(180); //  prove it, then build it               (the flip)
+  const desc = at(110); //  a user just describes the change      (self-serve)
+  const fw = at(120); //  Fireworks: 3 models race               (tool)
+  const day = at(168); //  Daytona: each runs live in a sandbox   (tool — spotlight)
+  const bt = at(120); //  Braintrust: scored, nothing breaks     (tool)
+  const test = at(124); //  real users try it, you see what sticks (validation)
+  const ship = at(130); //  useful? devs polish + ship it for real (payoff)
+  const outro = at(150); //  morf / the app that builds itself
 
-  const H = 92; // headline size for Jersey15 landscape
+  const H = 90; // headline size for Jersey15 landscape
 
   return (
     <AbsoluteFill style={{ backgroundColor: theme.paper }}>
@@ -242,9 +337,21 @@ export const MorphAd: React.FC = () => {
         </Beat>
       </Sequence>
 
-      <Sequence from={s1.from} durationInFrames={s1.len}>
-        <Beat durationInFrames={s1.len}>
-          <Statement lines={["asking for a feature", "used to mean waiting."]} fontSize={H} />
+      <Sequence from={domain.from} durationInFrames={domain.len}>
+        <Beat durationInFrames={domain.len}>
+          <Statement lines={["your software.", "any domain."]} fontSize={H} />
+        </Beat>
+      </Sequence>
+
+      <Sequence from={req.from} durationInFrames={req.len}>
+        <Beat durationInFrames={req.len}>
+          <Statement lines={["users keep asking", "for new features."]} fontSize={H} />
+        </Beat>
+      </Sequence>
+
+      <Sequence from={waste.from} durationInFrames={waste.len}>
+        <Beat durationInFrames={waste.len}>
+          <Statement lines={["devs build them —", { text: "most go unused.", accent: true }]} fontSize={H} />
         </Beat>
       </Sequence>
 
@@ -254,39 +361,49 @@ export const MorphAd: React.FC = () => {
         </Beat>
       </Sequence>
 
-      <Sequence from={s2.from} durationInFrames={s2.len}>
-        <Beat durationInFrames={s2.len}>
-          <Statement lines={["now you just", "describe it."]} fontSize={H} />
+      <Sequence from={desc.from} durationInFrames={desc.len}>
+        <Beat durationInFrames={desc.len}>
+          <Statement lines={["a user just", "describes the change."]} fontSize={H} />
         </Beat>
       </Sequence>
 
-      <Sequence from={s3.from} durationInFrames={s3.len}>
-        <Beat durationInFrames={s3.len}>
-          <Statement lines={["3 AI models race", "to build it."]} fontSize={H} />
+      <Sequence from={fw.from} durationInFrames={fw.len}>
+        <Beat durationInFrames={fw.len}>
+          <ToolBeat
+            img="logos/fireworks.png"
+            logoH={96}
+            lines={["3 AI models race", "to build it."]}
+            fontSize={H}
+          />
         </Beat>
       </Sequence>
 
-      <Sequence from={s4.from} durationInFrames={s4.len}>
-        <Beat durationInFrames={s4.len}>
-          <Statement lines={["every version is scored,", { text: "so nothing breaks.", accent: true }]} fontSize={H} />
+      <Sequence from={day.from} durationInFrames={day.len}>
+        <Beat durationInFrames={day.len} fadeIn={24} fadeOut={22}>
+          <DaytonaBeat />
         </Beat>
       </Sequence>
 
-      <Sequence from={tools.from} durationInFrames={tools.len}>
-        <Beat durationInFrames={tools.len} fadeIn={24} fadeOut={22}>
-          <ToolsBeat />
+      <Sequence from={bt.from} durationInFrames={bt.len}>
+        <Beat durationInFrames={bt.len}>
+          <ToolBeat
+            img="logos/braintrust.png"
+            logoH={104}
+            lines={["scored and safe —", { text: "nothing breaks.", accent: true }]}
+            fontSize={H}
+          />
         </Beat>
       </Sequence>
 
-      <Sequence from={s5.from} durationInFrames={s5.len}>
-        <Beat durationInFrames={s5.len}>
-          <Statement lines={["try it live —", "keep it or toss it."]} fontSize={H} />
+      <Sequence from={test.from} durationInFrames={test.len}>
+        <Beat durationInFrames={test.len}>
+          <Statement lines={["real users try it.", "you see what sticks."]} fontSize={H} />
         </Beat>
       </Sequence>
 
-      <Sequence from={s6.from} durationInFrames={s6.len}>
-        <Beat durationInFrames={s6.len}>
-          <Statement lines={["your app", { text: "evolves itself.", accent: true }]} fontSize={H} />
+      <Sequence from={ship.from} durationInFrames={ship.len}>
+        <Beat durationInFrames={ship.len}>
+          <Statement lines={["what works, devs polish,", { text: "secure, and ship.", accent: true }]} fontSize={H} />
         </Beat>
       </Sequence>
 
