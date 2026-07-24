@@ -29,7 +29,7 @@ export default function App() {
       {/* layout: header + sidebar + main */}
       <div className="absolute inset-0 flex flex-col">
         {/* header */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-blue-900/30 bg-blue-900 px-4 text-blue-50 backdrop-blur-xl">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-white/60 px-4 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <span className="text-lg font-bold text-primary">M</span>
@@ -39,12 +39,12 @@ export default function App() {
           <div className="flex items-center gap-2">
             <input
               placeholder="Search…"
-              className="h-8 w-56 rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-blue-50 outline-none placeholder:text-blue-200/60 focus-visible:border-white/40"
+              className="h-8 w-56 rounded-lg border border-black/10 bg-white/50 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
             />
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white/10">
+            <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-black/5">
               <span className="text-sm">🔔</span>
             </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-sm font-medium text-blue-50">
+            <button className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
               U
             </button>
           </div>
