@@ -17,8 +17,8 @@ export default function App() {
     <div className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-background to-muted" />
-      <div className="pointer-events-none absolute -left-40 top-1/4 h-96 w-96 rounded-full bg-pink-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-40 bottom-1/4 h-96 w-96 rounded-full bg-rose-300/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-40 top-1/4 h-96 w-96 rounded-full bg-lime-600/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-40 bottom-1/4 h-96 w-96 rounded-full bg-green-700/10 blur-3xl" />
 
       {/* layout: header + sidebar + main */}
       <div className="absolute inset-0 flex flex-col">
