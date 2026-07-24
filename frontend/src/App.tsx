@@ -17,8 +17,8 @@ export default function App() {
     <div className="dark relative h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-background via-background to-muted" />
-      <div className="pointer-events-none absolute -left-40 top-1/4 h-96 w-96 rounded-full bg-violet-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute -right-40 bottom-1/4 h-96 w-96 rounded-full bg-cyan-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-40 top-1/4 h-96 w-96 rounded-full bg-pink-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-40 bottom-1/4 h-96 w-96 rounded-full bg-rose-400/20 blur-3xl" />
 
       {/* the stage — the app being built — fills the viewport */}
       <div className="absolute inset-0">
