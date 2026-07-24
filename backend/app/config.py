@@ -21,9 +21,11 @@ RACERS: list[Racer] = [
 # --- gateways -----------------------------------------------------------------
 # "fireworks_direct" : OpenAI client -> Fireworks, wrapped with braintrust.wrap_openai
 #                      (guaranteed logging, verified from docs). DEFAULT.
-# "braintrust_proxy" : OpenAI client -> Braintrust proxy (base_url below). Logs +
-#                      caches natively. Requires the Fireworks key configured as a
-#                      secret in your Braintrust org settings.
+# "braintrust_proxy" : OpenAI client -> Braintrust gateway (base_url below). Logs +
+#                      caches natively. Requires registering each racer as a CUSTOM
+#                      MODEL in Braintrust settings (they're newer than the default
+#                      catalog) — see docs/BRAINTRUST_FIREWORKS.md. The model= string
+#                      stays identical to the direct path, so no code change to switch.
 MODEL_GATEWAY = os.getenv("MODEL_GATEWAY", "fireworks_direct")
 
 FIREWORKS_BASE_URL = "https://api.fireworks.ai/inference/v1"
