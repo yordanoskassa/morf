@@ -12,7 +12,7 @@ import { Toaster } from '@/components/ui/sonner'
 
 const darkGlass = 'rounded-2xl border border-white/10 bg-neutral-950/90 text-neutral-100 shadow-2xl backdrop-blur-xl'
 
-const glass = 'rounded-2xl border border-white/10 bg-black/80 shadow-2xl backdrop-blur-xl'
+const glass = 'rounded-2xl border border-black/10 bg-white/80 shadow-2xl backdrop-blur-xl'
 
 export default function App() {
   const { user, login } = useAuth()
@@ -29,17 +29,17 @@ export default function App() {
       {/* layout: header + sidebar + main */}
       <div className="absolute inset-0 flex flex-col">
         {/* header */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-black/80 px-4 backdrop-blur-xl">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-white/60 px-4 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <span className="text-lg font-bold text-primary">M</span>
             </div>
-            <span className="text-sm font-semibold">yes indeed its the winner 🏆</span>
+            <span className="text-sm font-semibold">this could be anything</span>
           </div>
           <div className="flex items-center gap-2">
             <input
               placeholder="Search…"
-              className="h-8 w-56 rounded-lg border border-white/10 bg-black/70 px-3 text-sm text-white outline-none placeholder:text-neutral-500 focus-visible:border-ring"
+              className="h-8 w-56 rounded-lg border border-black/10 bg-white/50 px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring"
             />
             <button className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-black/5">
               <span className="text-sm">🔔</span>
@@ -52,7 +52,7 @@ export default function App() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* sidebar */}
-          <aside className="flex w-56 shrink-0 flex-col border-r border-white/10 bg-black/60 backdrop-blur-xl">
+          <aside className="flex w-56 shrink-0 flex-col border-r border-black/10 bg-white/40 backdrop-blur-xl">
             <nav className="flex-1 space-y-1 p-3">
               {[
                 { icon: '📊', label: 'Dashboard', active: true },
@@ -70,14 +70,14 @@ export default function App() {
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className={item.label === 'Analytics' ? 'font-bold' : ''}>{item.label}</span>
                 </button>
               ))}
             </nav>
             <div className="border-t border-black/10 p-3">
-              <div className="rounded-lg border border-blue-500/30 bg-black/70 p-3">
-                <div className="text-xs font-bold text-white">Pro plan</div>
-                <div className="mt-1 text-[10px] font-bold text-neutral-400">Upgrade for more features</div>
+              <div className="rounded-lg border border-blue-500/50 bg-white/50 p-3">
+                <div className="text-xs font-bold">Pro plan</div>
+                <div className="mt-1 text-[10px] font-bold text-muted-foreground">Upgrade for more features</div>
               </div>
             </div>
           </aside>
