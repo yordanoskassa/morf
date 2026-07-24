@@ -120,7 +120,14 @@ export const WordPop: React.FC<{
         const color = obj.accent ? theme.accent : obj.soft ? theme.inkSoft : theme.ink;
         const words = obj.text.split(" ");
         return (
-          <div key={li} style={{ display: "flex", gap: "0.32em", whiteSpace: "nowrap" }}>
+          <div
+            key={li}
+            style={{
+              display: "flex",
+              gap: `${(obj.soft ? fontSize * 0.62 : fontSize) * 0.62}px`,
+              whiteSpace: "nowrap",
+            }}
+          >
             {words.map((w, wi) => {
               const idx = wordIndex++;
               const s = spring({

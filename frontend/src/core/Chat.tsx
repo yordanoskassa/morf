@@ -202,18 +202,6 @@ export function Chat() {
       style={dockStyle}
       className="fixed z-50 flex w-[min(680px,calc(100vw-2rem))] flex-col gap-2"
     >
-      {/* floating pixel wordmark (Jersey 15) — same font as the launch video.
-          data-morph-logo is a survival anchor: morphs may restyle it, never remove it. */}
-      <div className="flex justify-center">
-        <div
-          data-morph-logo
-          className="pointer-events-none select-none rounded-xl border border-white/15 bg-neutral-950/85 px-4 py-1 leading-none text-white shadow-lg backdrop-blur-xl"
-          style={{ fontFamily: '"Jersey 15", monospace', letterSpacing: '0.02em', textShadow: '0 0 14px rgba(255,255,255,0.35)' }}
-        >
-          <span className="text-3xl">morf</span>
-        </div>
-      </div>
-
       {/* expandable panel: live console + results, grows upward from the bar */}
       {open && turns.length > 0 && (
         <div className="max-h-[45vh] overflow-auto rounded-2xl border border-white/10 bg-background/70 p-3 shadow-2xl backdrop-blur-xl">
@@ -250,6 +238,17 @@ export function Chat() {
         <button type="button" onPointerDown={startDrag} title="drag to move"
           className="cursor-grab px-1 text-muted-foreground hover:text-foreground active:cursor-grabbing">⠿</button>
 
+        {/* morf wordmark — the logo lives inline on the bar. data-morph-logo is a survival
+            anchor: morphs may restyle it, never remove it. */}
+        <span
+          data-morph-logo
+          className="select-none px-0.5 text-xl leading-none text-foreground"
+          style={{ fontFamily: '"Jersey 15", monospace', letterSpacing: '0.03em', textShadow: '0 0 10px rgba(255,255,255,0.25)' }}
+        >
+          morf
+        </span>
+
+        <span className="h-4 w-px shrink-0 bg-white/15" />
         <span className={`h-2 w-2 shrink-0 rounded-full ${busy ? 'animate-pulse bg-emerald-400' : 'bg-violet-400'}`} />
 
         <input

@@ -105,10 +105,10 @@ const StatueBeat: React.FC = () => {
           }}
         >
           <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
-            make features
+            morf lets the
           </div>
           <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
-            earn their place.
+            feature prove itself.
           </div>
         </div>
       </AbsoluteFill>
@@ -377,7 +377,7 @@ export const MorphAd: React.FC = () => {
   const intro = at(115); //  morf
   const req = at(110); //  your users want more                  (hook)
   const waste = at(122); //  devs guess, build, it flops           (the waste)
-  const statue = at(180); //  make features earn their place        (the flip)
+  const statue = at(180); //  morf lets the feature prove itself     (the flip)
   const embed = at(175); //  wraps any existing site               (integration)
   const desc = at(108); //  someone types a wish                  (self-serve)
   const fw = at(120); //  Fireworks: 3 models race               (tool)
