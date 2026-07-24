@@ -8,9 +8,16 @@ import {
   useVideoConfig,
 } from "remotion";
 import { loadFont } from "@remotion/google-fonts/Jersey15";
+import { loadFont as loadSans } from "@remotion/google-fonts/Inter";
+import { loadFont as loadMono } from "@remotion/google-fonts/JetBrainsMono";
 import { theme } from "./theme";
 
 export const { fontFamily: pixelFont } = loadFont();
+export const { fontFamily: sansFont } = loadSans();
+export const { fontFamily: monoFont } = loadMono();
+
+export type Line = string | { text: string; accent?: boolean; soft?: boolean; sans?: boolean };
+const fontFor = (obj: { sans?: boolean }) => (obj.sans ? sansFont : pixelFont);
 
 /* -------------------------------------------------------------------------- */
 /* Paper background — near-white, faint grid, soft light, gentle vignette      */
@@ -104,7 +111,7 @@ export const Wordmark: React.FC<{
 /* WordPop — words spring in one at a time with a little overshoot            */
 /* -------------------------------------------------------------------------- */
 export const WordPop: React.FC<{
-  lines: (string | { text: string; accent?: boolean; soft?: boolean })[];
+  lines: Line[];
   fontSize?: number;
   startFrame?: number;
   gap?: number;
@@ -141,7 +148,8 @@ export const WordPop: React.FC<{
                 <span
                   key={wi}
                   style={{
-                    fontFamily: pixelFont,
+                    fontFamily: fontFor(obj),
+                    fontWeight: obj.sans ? 600 : undefined,
                     fontSize: obj.soft ? fontSize * 0.62 : fontSize,
                     color,
                     lineHeight: 1.5,
@@ -165,7 +173,7 @@ export const WordPop: React.FC<{
 /* TypeOn — typewriter reveal with blinking block cursor                       */
 /* -------------------------------------------------------------------------- */
 export const TypeOn: React.FC<{
-  lines: (string | { text: string; accent?: boolean })[];
+  lines: Line[];
   fontSize?: number;
   startFrame?: number;
   cps?: number;
@@ -192,7 +200,8 @@ export const TypeOn: React.FC<{
           <div
             key={li}
             style={{
-              fontFamily: pixelFont,
+              fontFamily: fontFor(obj),
+              fontWeight: obj.sans ? 600 : undefined,
               fontSize,
               color,
               lineHeight: 1.5,
@@ -214,7 +223,7 @@ export const TypeOn: React.FC<{
 /* Supports an accent word via {accent:'word'}                                 */
 /* -------------------------------------------------------------------------- */
 export const Statement: React.FC<{
-  lines: (string | { text: string; accent?: boolean; soft?: boolean })[];
+  lines: Line[];
   startFrame?: number;
   fontSize?: number;
   gap?: number;
@@ -249,11 +258,12 @@ export const Statement: React.FC<{
           <span
             key={i}
             style={{
-              fontFamily: pixelFont,
+              fontFamily: fontFor(obj),
+              fontWeight: obj.sans ? 600 : undefined,
               fontSize: obj.soft ? fontSize * 0.62 : fontSize,
               color,
               lineHeight: 1.5,
-              letterSpacing: "0.01em",
+              letterSpacing: obj.sans ? "-0.01em" : "0.01em",
               whiteSpace: "nowrap",
             }}
           >

@@ -36,10 +36,14 @@ You will be given the current contents of the app files, a short history of rece
 changes, and a change request.
 
 Make SURGICAL edits. For each file, return a `search`/`replace` pair: `search` is an
-EXACT snippet copied verbatim from the current file (include enough surrounding lines to
-be unique), `replace` is what it becomes. Do NOT regenerate whole files. Use `content`
-(full file) ONLY when creating a brand-new file. Return the fewest edits that satisfy
-the request.
+EXACT snippet copied verbatim from the current file (include just enough surrounding
+lines to be unique — usually 3-8 lines), `replace` is what it becomes.
+
+HARD RULES on output size (your response is capped — exceeding it fails the whole edit):
+- NEVER return a whole file in `content` for a file that already exists. Use search/replace.
+- Keep each `search`/`replace` snippet SMALL — only the lines that change, not the file.
+- `content` (full file) is allowed ONLY when creating a brand-new file.
+Return the fewest, smallest edits that satisfy the request.
 
 You may edit ANY file under frontend/src — components, styles, the App shell, the chat
 itself. Mutability is a concept, not a partition. Only files under frontend/src are the
@@ -77,7 +81,7 @@ async def generate(racer: config.Racer, prompt: str, focus: list[str], history: 
             ],
             response_format={"type": "json_schema", "json_schema": _SCHEMA},
             temperature=0.2,
-            max_tokens=8000,
+            max_tokens=16000,   # headroom so surgical edits don't truncate into invalid JSON
         )
         gen_ms = int((time.perf_counter() - t0) * 1000)
         raw = resp.choices[0].message.content or "{}"

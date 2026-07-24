@@ -7,7 +7,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="MorphAd"
         component={MorphAd}
-        durationInFrames={1622}
+        durationInFrames={1660}
         fps={30}
         width={1920}
         height={1080}
