@@ -9,7 +9,7 @@ from braintrust import wrap_openai
 
 from . import config
 from .schemas import MorphPlan, FileEdit
-from .immutable_guard import mutable_context
+from .immutable_guard import app_context
 
 # ------------------------------------------------------------------ client -----
 def _client() -> AsyncOpenAI:
@@ -32,22 +32,30 @@ _SCHEMA = {
 }
 
 _SYSTEM = """You edit a Vite + React + TypeScript app that uses shadcn/ui components.
-You will be given the current contents of the editable files and a change request.
+You will be given the current contents of the app files and a change request.
 Return ONLY files you need to create or overwrite, with their COMPLETE new content.
-Rules:
-- Only touch files under the mutable roots you were shown. Never invent immutable paths.
-- Keep imports valid and the app compiling. Use existing shadcn components in components/ui.
+
+You may edit ANY file under frontend/src — components, styles, the App shell, the chat
+itself. Mutability is a concept, not a partition. Only files under frontend/src are the
+app; never touch backend, build config, or tooling.
+
+THE ONE INVARIANT — the chat must survive. A change only ships if, afterwards, the app
+still builds, still renders, and the source STILL CONTAINS both:
+  - an element carrying the attribute  data-morph-chat
+  - the string  /morph  (the chat's call to the morph API)
+You may restyle, move, or restructure the chat, but you must KEEP a working chat that
+preserves those two anchors. Never remove the chat or its ability to send a morph.
+
+Other rules:
+- Keep imports valid and the app compiling. Reuse shadcn components in components/ui.
 - Prefer the smallest change that satisfies the request.
 Respond as JSON matching the schema."""
 
 
 def _build_user_prompt(prompt: str, focus: list[str]) -> str:
-    ctx = mutable_context()
-    if focus:
-        # bias context toward focused files but keep the rest for reference
-        ctx = {**{k: ctx[k] for k in focus if k in ctx}, **ctx}
+    ctx = app_context(focus=focus)
     files_blob = "\n\n".join(f"=== {p} ===\n{c}" for p, c in ctx.items())
-    return f"# Editable files\n{files_blob}\n\n# Change request\n{prompt}"
+    return f"# App files (you may edit any of these)\n{files_blob}\n\n# Change request\n{prompt}"
 
 
 async def generate(racer: config.Racer, prompt: str, focus: list[str]) -> tuple[MorphPlan | None, int, str]:

@@ -19,6 +19,7 @@ def log_morph(prompt: str, c: CandidateResult) -> str:
             scores={
                 "compiled": 1.0 if c.compiled else 0.0,
                 "rendered": 1.0 if c.rendered else 0.0,
+                "chat_ok": 1.0 if c.chat_ok else 0.0,
                 "undo": 0.0,   # optimistic; flipped by log_undo if the user reverts
             },
             metrics={

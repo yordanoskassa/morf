@@ -28,10 +28,11 @@ class CandidateResult(BaseModel):
     edit_type: str
     summary: str
     files: list[FileEdit]
-    blocked: bool = False              # touched an immutable path
+    blocked: bool = False              # touched the kernel / outside the app
     blocked_reason: str | None = None
     compiled: bool = False
     rendered: bool = False
+    chat_ok: bool = False              # chat survived (anchors still present)
     gen_ms: int = 0                    # model generation latency
     build_ms: int = 0
     render_ms: int = 0

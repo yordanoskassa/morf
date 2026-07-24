@@ -1,8 +1,8 @@
-"""Rejects any morph that touches a protected path. 🔒 immutable.
+"""The invariant guard. 🔒 kernel.
 
-The whole safety story of a *self-editing* app: a morph can only ever change files
-under the mutable roots, and never a file listed in IMMUTABLE.json. We check this
-BEFORE a candidate ever reaches a Daytona sandbox.
+Mutability is a concept, not a partition: a morph may edit ANY file under app_root.
+The kernel (machinery) is never editable. A morph only ships if the CHAT SURVIVES —
+build + render + the app still contains the chat anchors (checked in the sandbox).
 """
 from __future__ import annotations
 import os
@@ -12,7 +12,9 @@ from pathlib import Path
 
 # repo root = two levels up from this file (backend/app/ -> repo/), overridable in Docker.
 REPO_ROOT = Path(os.getenv("MORPH_REPO_ROOT", str(Path(__file__).resolve().parents[2])))
-_MANIFEST = REPO_ROOT / "IMMUTABLE.json"
+_MANIFEST = REPO_ROOT / "INVARIANT.json"
+
+_CODE_EXT = {".tsx", ".ts", ".jsx", ".js", ".css", ".html", ".json"}
 
 
 def _load() -> dict:
@@ -20,59 +22,71 @@ def _load() -> dict:
 
 
 def _norm(p: str) -> str:
-    # normalise to forward-slash, strip leading ./ and /
     return p.replace("\\", "/").lstrip("./").lstrip("/")
 
 
-def is_protected(path: str) -> bool:
-    protected = _load()["protected"]
+def is_kernel(path: str) -> bool:
     p = _norm(path)
-    return any(fnmatch.fnmatch(p, _norm(glob)) for glob in protected)
+    return any(fnmatch.fnmatch(p, _norm(g)) for g in _load()["kernel"])
 
 
-def is_mutable(path: str) -> bool:
-    roots = _load().get("mutable_roots", [])
+def in_app(path: str) -> bool:
+    root = _norm(_load()["app_root"])
     p = _norm(path)
-    return any(fnmatch.fnmatch(p, _norm(glob)) for glob in roots)
+    return p == root or p.startswith(root + "/")
 
 
 def check_files(paths: list[str]) -> tuple[bool, str | None]:
-    """Return (ok, reason). ok=False if any path is protected or outside mutable roots."""
+    """Allow a morph only if every path is inside the app and not the kernel."""
     for path in paths:
-        if is_protected(path):
-            return False, f"'{path}' is immutable"
-        if not is_mutable(path):
-            return False, f"'{path}' is outside the mutable roots"
+        if is_kernel(path):
+            return False, f"'{path}' is kernel — the machinery, not part of the app"
+        if not in_app(path):
+            return False, f"'{path}' is outside the app ({_load()['app_root']})"
     return True, None
 
 
-def mutable_context(max_bytes: int = 60_000) -> dict[str, str]:
-    """Read current mutable-root files so a model knows what it's editing.
+def anchors() -> list[str]:
+    return _load().get("chat_survival", {}).get("anchors", [])
 
-    Returns {relative_path: content}. Truncated to max_bytes total to keep prompts sane.
+
+def app_context(max_bytes: int = 120_000, focus: list[str] | None = None) -> dict[str, str]:
+    """Read the whole app source so a model knows what it can reshape.
+
+    Prioritised: focused files first, then app files, then shadcn ui primitives.
+    Truncated to max_bytes total.
     """
-    roots = _load().get("mutable_roots", [])
+    root = REPO_ROOT / _norm(_load()["app_root"])
+    if not root.exists():
+        return {}
+    focus = focus or []
+    items: list[tuple[str, Path]] = []
+    for f in root.rglob("*"):
+        if not (f.is_file() and f.suffix in _CODE_EXT):
+            continue
+        rel = str(f.relative_to(REPO_ROOT))
+        if is_kernel(rel):
+            continue
+        items.append((rel, f))
+
+    def prio(item: tuple[str, Path]) -> int:
+        rel = item[0]
+        if rel in focus:
+            return 0
+        if "/components/ui/" in rel:
+            return 2
+        return 1
+
+    items.sort(key=prio)
     out: dict[str, str] = {}
     total = 0
-    for glob in roots:
-        # strip a trailing /** and walk the directory for all files
-        base = _norm(glob)
-        base = base[:-3] if base.endswith("/**") else base
-        base_dir = REPO_ROOT / base
-        if not base_dir.exists():
+    for rel, f in items:
+        try:
+            text = f.read_text()
+        except (UnicodeDecodeError, OSError):
             continue
-        for f in base_dir.rglob("*"):
-            if not f.is_file():
-                continue
-            rel = str(f.relative_to(REPO_ROOT))
-            if is_protected(rel):
-                continue
-            try:
-                text = f.read_text()
-            except (UnicodeDecodeError, OSError):
-                continue
-            if total + len(text) > max_bytes:
-                continue
-            out[rel] = text
-            total += len(text)
+        if total + len(text) > max_bytes:
+            continue
+        out[rel] = text
+        total += len(text)
     return out

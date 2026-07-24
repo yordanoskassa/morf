@@ -1,0 +1,24 @@
+{
+  "$comment": "Mutability is a CONCEPT, not a partition. A morph may edit ANY file under app_root — chat, scoreboard, components, styles, the App shell, even itself. The kernel (the machinery that runs + verifies morphs) is never editable. A morph only ships if the CHAT SURVIVES: it must still build, still render, and the post-morph app must still contain the chat anchors. Break the chat and the candidate loses — so your live chat can never be removed, only restyled.",
+  "kernel": [
+    "INVARIANT.json",
+    "backend/**",
+    "Dockerfile",
+    "docs/**",
+    ".github/**",
+    "frontend/package.json",
+    "frontend/package-lock.json",
+    "frontend/vite.config.ts",
+    "frontend/tsconfig.json",
+    "frontend/tsconfig.app.json",
+    "frontend/tsconfig.node.json",
+    "frontend/index.html",
+    "frontend/components.json",
+    "frontend/eslint.config.js"
+  ],
+  "app_root": "frontend/src",
+  "chat_survival": {
+    "anchors": ["data-morph-chat", "/morph"],
+    "note": "The post-morph source under app_root must still contain these strings, or the chat is considered removed/broken and the candidate is rejected."
+  }
+}

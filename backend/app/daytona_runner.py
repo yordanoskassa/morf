@@ -4,6 +4,7 @@ We time each step ourselves — the Daytona SDK exposes no latency field on exec
 """
 from __future__ import annotations
 import time
+import shlex
 import asyncio
 from dataclasses import dataclass, field
 
@@ -19,6 +20,7 @@ from daytona import (
 )
 
 from . import config
+from .immutable_guard import anchors
 from .schemas import FileEdit
 
 
@@ -26,6 +28,7 @@ from .schemas import FileEdit
 class EvalOut:
     compiled: bool = False
     rendered: bool = False
+    chat_ok: bool = False
     build_ms: int = 0
     render_ms: int = 0
     build_log: str = ""
@@ -111,6 +114,9 @@ async def evaluate(files: list[FileEdit]) -> EvalOut:
             headers = {"x-daytona-preview-token": preview.token} if preview.token else {}
             out.rendered = await _probe(preview.url, headers)
             out.render_ms = int((time.perf_counter() - t1) * 1000)
+
+            # --- chat survives? every anchor must still be present in the app source ---
+            out.chat_ok = await _anchors_present(sandbox, f"repo/{config.APP_SUBDIR}/src")
             return out
     except Exception as e:  # noqa: BLE001
         out.error = f"{type(e).__name__}: {e}"
@@ -121,6 +127,15 @@ async def evaluate(files: list[FileEdit]) -> EvalOut:
                 await sandbox.delete()   # ephemeral, but delete explicitly to free the pool
             except Exception:  # noqa: BLE001
                 pass
+
+
+async def _anchors_present(sandbox, src_dir: str) -> bool:
+    """The chat-survival check: each anchor string must still exist in the app source."""
+    for a in anchors():
+        r = await sandbox.process.exec(f"grep -rqF -- {shlex.quote(a)} {src_dir}", timeout=30)
+        if r.exit_code != 0:
+            return False
+    return True
 
 
 async def _probe(url: str, headers: dict, tries: int = 15, delay: float = 1.0) -> bool:

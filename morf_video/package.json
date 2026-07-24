@@ -1,0 +1,23 @@
+{
+  "name": "morph-ad",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remotion ad for morph — the app that builds itself",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion render MorphAd out/morph-ad.mp4 --codec=h264",
+    "still": "remotion still MorphAd out/still.png",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/google-fonts": "4.0.499",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.499",
+    "@remotion/cli": "4.0.499"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.5.4"
+  }
+}
