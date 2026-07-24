@@ -19,6 +19,11 @@ export const { fontFamily: monoFont } = loadMono();
 export type Line = string | { text: string; accent?: boolean; soft?: boolean; sans?: boolean };
 const fontFor = (obj: { sans?: boolean }) => (obj.sans ? sansFont : pixelFont);
 
+/* shared typographic rhythm — keep every text component on the same spacing */
+const WORD_GAP = 0.34; // space between words, in em
+const LINE_GAP = 0.46; // space between lines, in em
+const LEADING = 1.12; // tight line box; LINE_GAP does the breathing
+
 /* -------------------------------------------------------------------------- */
 /* Paper background — near-white, faint grid, soft light, gentle vignette      */
 /* -------------------------------------------------------------------------- */
@@ -116,22 +121,31 @@ export const WordPop: React.FC<{
   startFrame?: number;
   gap?: number;
   wordStagger?: number;
-}> = ({ lines, fontSize = 90, startFrame = 0, gap = 22, wordStagger = 7 }) => {
+}> = ({ lines, fontSize = 90, startFrame = 0, gap, wordStagger = 7 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   let wordIndex = 0;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap, alignItems: "center", textAlign: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: gap ?? fontSize * LINE_GAP,
+        alignItems: "center",
+        textAlign: "center",
+      }}
+    >
       {lines.map((ln, li) => {
         const obj = typeof ln === "string" ? { text: ln } : ln;
         const color = obj.accent ? theme.accent : obj.soft ? theme.inkSoft : theme.ink;
+        const fs = obj.soft ? fontSize * 0.62 : fontSize;
         const words = obj.text.split(" ");
         return (
           <div
             key={li}
             style={{
               display: "flex",
-              gap: `${(obj.soft ? fontSize * 0.62 : fontSize) * 0.62}px`,
+              gap: `${fs * WORD_GAP}px`,
               whiteSpace: "nowrap",
             }}
           >
@@ -150,9 +164,10 @@ export const WordPop: React.FC<{
                   style={{
                     fontFamily: fontFor(obj),
                     fontWeight: obj.sans ? 600 : undefined,
-                    fontSize: obj.soft ? fontSize * 0.62 : fontSize,
+                    fontSize: fs,
                     color,
-                    lineHeight: 1.5,
+                    lineHeight: LEADING,
+                    letterSpacing: obj.sans ? "-0.01em" : "0.01em",
                     display: "inline-block",
                     transform: `translateY(${rise}px) scale(${sc})`,
                     opacity: Math.min(1, s * 1.5),
@@ -178,7 +193,7 @@ export const TypeOn: React.FC<{
   startFrame?: number;
   cps?: number;
   gap?: number;
-}> = ({ lines, fontSize = 90, startFrame = 0, cps = 24, gap = 22 }) => {
+}> = ({ lines, fontSize = 90, startFrame = 0, cps = 24, gap }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const chars = Math.max(0, Math.floor(((frame - startFrame) / fps) * cps));
@@ -188,7 +203,15 @@ export const TypeOn: React.FC<{
     0
   );
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap, alignItems: "center", textAlign: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: gap ?? fontSize * LINE_GAP,
+        alignItems: "center",
+        textAlign: "center",
+      }}
+    >
       {lines.map((ln, li) => {
         const obj = typeof ln === "string" ? { text: ln } : ln;
         const color = obj.accent ? theme.accent : theme.ink;
@@ -204,9 +227,10 @@ export const TypeOn: React.FC<{
               fontWeight: obj.sans ? 600 : undefined,
               fontSize,
               color,
-              lineHeight: 1.5,
+              lineHeight: LEADING,
+              letterSpacing: obj.sans ? "-0.01em" : "0.01em",
               whiteSpace: "nowrap",
-              minHeight: fontSize * 1.5,
+              minHeight: fontSize * LEADING,
             }}
           >
             {obj.text.slice(0, avail)}
@@ -227,7 +251,7 @@ export const Statement: React.FC<{
   startFrame?: number;
   fontSize?: number;
   gap?: number;
-}> = ({ lines, startFrame = 0, fontSize = 46, gap = 22 }) => {
+}> = ({ lines, startFrame = 0, fontSize = 46, gap }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const s = spring({
@@ -241,7 +265,7 @@ export const Statement: React.FC<{
       style={{
         display: "flex",
         flexDirection: "column",
-        gap,
+        gap: gap ?? fontSize * LINE_GAP,
         alignItems: "center",
         textAlign: "center",
         transform: `translateY(${rise}px)`,
@@ -262,7 +286,7 @@ export const Statement: React.FC<{
               fontWeight: obj.sans ? 600 : undefined,
               fontSize: obj.soft ? fontSize * 0.62 : fontSize,
               color,
-              lineHeight: 1.5,
+              lineHeight: LEADING,
               letterSpacing: obj.sans ? "-0.01em" : "0.01em",
               whiteSpace: "nowrap",
             }}

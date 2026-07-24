@@ -12,18 +12,30 @@ from .schemas import MorphPlan, FileEdit
 from .immutable_guard import app_context
 
 # ------------------------------------------------------------------ client -----
-def _client() -> AsyncOpenAI:
-    if config.MODEL_GATEWAY == "braintrust_proxy":
+# NOTE: we use the `openai` SDK only as a generic OpenAI-COMPATIBLE HTTP client; it's
+# pointed at Fireworks (or the Braintrust proxy). The api_key is your FIREWORKS/BRAINTRUST
+# key — NOT an OpenAI key. Built lazily so a missing key doesn't crash app boot.
+_CLIENT: AsyncOpenAI | None = None
+
+
+def _make_client() -> AsyncOpenAI:
+    proxy = config.MODEL_GATEWAY == "braintrust_proxy"
+    key = config.BRAINTRUST_API_KEY if proxy else config.FIREWORKS_API_KEY
+    if not key:
+        need = "BRAINTRUST_API_KEY (proxy mode)" if proxy else "FIREWORKS_API_KEY"
+        raise RuntimeError(f"No model API key set — set {need} in the environment")
+    if proxy:
         # One base_url change: every call logged + cached by Braintrust.
-        # Requires the Fireworks key configured as a secret in Braintrust org settings.
-        c = AsyncOpenAI(api_key=config.BRAINTRUST_API_KEY, base_url=config.BRAINTRUST_PROXY_URL)
-        return c
+        return AsyncOpenAI(api_key=key, base_url=config.BRAINTRUST_PROXY_URL)
     # default: talk to Fireworks directly, wrap for Braintrust tracing.
-    c = AsyncOpenAI(api_key=config.FIREWORKS_API_KEY, base_url=config.FIREWORKS_BASE_URL)
-    return wrap_openai(c)
+    return wrap_openai(AsyncOpenAI(api_key=key, base_url=config.FIREWORKS_BASE_URL))
 
 
-CLIENT = _client()
+def get_client() -> AsyncOpenAI:
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = _make_client()
+    return _CLIENT
 
 # JSON schema forced on every model so we get structured file edits, not prose.
 _SCHEMA = {
@@ -73,7 +85,7 @@ async def generate(racer: config.Racer, prompt: str, focus: list[str], history: 
     """Run one racer. Returns (plan|None, gen_ms, error)."""
     t0 = time.perf_counter()
     try:
-        resp = await CLIENT.chat.completions.create(
+        resp = await get_client().chat.completions.create(
             model=racer.model,
             messages=[
                 {"role": "system", "content": _SYSTEM},

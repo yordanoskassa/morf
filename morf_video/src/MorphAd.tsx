@@ -107,10 +107,10 @@ const StatueBeat: React.FC = () => {
           }}
         >
           <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
-            morf lets the
+            what if the app
           </div>
-          <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
-            feature prove itself.
+          <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.16 }}>
+            built it instead?
           </div>
         </div>
       </AbsoluteFill>
