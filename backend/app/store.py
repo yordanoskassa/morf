@@ -30,14 +30,17 @@ async def ping() -> bool:
         return False
 
 
-async def save_morph(doc: dict) -> None:
+async def save_morph(doc: dict) -> str | None:
     if _db is None:
-        return
+        return None
     doc = {**doc, "ts": datetime.now(timezone.utc)}
+    doc.setdefault("votes", {})
+    doc.setdefault("author", "anon")
     try:
-        await _db.morphs.insert_one(doc)
+        res = await _db.morphs.insert_one(doc)
+        return str(res.inserted_id)
     except Exception:  # noqa: BLE001 — persistence must never break a morph
-        pass
+        return None
 
 
 async def recent_prompts(n: int = 8) -> list[dict]:
@@ -59,6 +62,65 @@ async def mark_undo(span_id: str) -> None:
         await _db.morphs.update_one({"winner.span_id": span_id}, {"$set": {"undone": True}})
     except Exception:  # noqa: BLE001
         pass
+
+
+async def add_vote(morph_id: str, user_id: str, value: int) -> None:
+    if _db is None:
+        return
+    from bson import ObjectId
+    try:
+        oid = ObjectId(morph_id)
+    except Exception:  # noqa: BLE001
+        return
+    try:
+        if value == 0:
+            await _db.morphs.update_one({"_id": oid}, {"$unset": {f"votes.{user_id}": ""}})
+        else:
+            await _db.morphs.update_one({"_id": oid}, {"$set": {f"votes.{user_id}": 1 if value > 0 else -1}})
+    except Exception:  # noqa: BLE001
+        pass
+
+
+async def get_morph(morph_id: str) -> dict | None:
+    if _db is None:
+        return None
+    from bson import ObjectId
+    try:
+        return await _db.morphs.find_one({"_id": ObjectId(morph_id)})
+    except Exception:  # noqa: BLE001
+        return None
+
+
+async def timeline(user_id: str, limit: int = 60) -> dict:
+    """All morphs newest→oldest with vote tallies; plus the top-voted and current ids."""
+    if _db is None:
+        return {"items": [], "top_id": None, "current_id": None}
+    try:
+        cur = _db.morphs.find({}).sort("ts", -1).limit(limit)
+        docs = [d async for d in cur]
+    except Exception:  # noqa: BLE001
+        return {"items": [], "top_id": None, "current_id": None}
+
+    items = []
+    for d in docs:
+        votes = d.get("votes", {}) or {}
+        up = sum(1 for v in votes.values() if v > 0)
+        down = sum(1 for v in votes.values() if v < 0)
+        w = d.get("winner") or {}
+        items.append({
+            "morph_id": str(d["_id"]), "prompt": d.get("prompt", ""),
+            "author": d.get("author", "anon"), "model": w.get("racer"),
+            "shipped": bool(d.get("shipped")),
+            "ts": d["ts"].isoformat() if d.get("ts") else None,
+            "up": up, "down": down, "score": up - down,
+            "my_vote": int(votes.get(user_id, 0)),
+            "restored_from": d.get("restored_from"),
+        })
+    shipped = [it for it in items if it["shipped"]]
+    top = max(shipped, key=lambda it: it["score"], default=None) if shipped else None
+    current = shipped[0] if shipped else None  # items are newest-first
+    return {"items": items, "top_id": top["morph_id"] if top else None,
+            "current_id": current["morph_id"] if current else None}
 
 
 async def fetch_recent(days: int = 7) -> list[dict]:

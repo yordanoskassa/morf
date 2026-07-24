@@ -23,6 +23,8 @@ class MorphRequest(BaseModel):
     prompt: str
     # optional: client can hint which files are in view
     focus: list[str] = Field(default_factory=list)
+    user_id: str | None = None
+    user_name: str | None = None
 
 
 class CandidateResult(BaseModel):
@@ -52,11 +54,44 @@ class MorphResponse(BaseModel):
     candidates: list[CandidateResult]
     shipped: bool = False
     commit_sha: str | None = None
+    morph_id: str | None = None        # id of the persisted timeline node
 
 
 class UndoRequest(BaseModel):
     span_id: str
     commit_sha: str | None = None      # if set, revert this commit in the repo
+
+
+class VoteRequest(BaseModel):
+    morph_id: str
+    user_id: str
+    value: int                         # +1, -1, or 0 to clear
+
+
+class RestoreRequest(BaseModel):
+    morph_id: str
+    user_id: str | None = None
+    user_name: str | None = None
+
+
+class TimelineItem(BaseModel):
+    morph_id: str
+    prompt: str
+    author: str
+    model: str | None                  # winning model (racer key)
+    shipped: bool
+    ts: str | None
+    up: int
+    down: int
+    score: int
+    my_vote: int
+    restored_from: str | None = None
+
+
+class TimelineResponse(BaseModel):
+    items: list[TimelineItem]
+    top_id: str | None                 # highest-scored node (community favorite)
+    current_id: str | None             # most-recent shipped node (live version)
 
 
 class ScoreboardRow(BaseModel):

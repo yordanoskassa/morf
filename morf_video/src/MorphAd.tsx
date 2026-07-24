@@ -10,7 +10,15 @@ import {
   useVideoConfig,
 } from "remotion";
 import { theme } from "./theme";
-import { Cursor, PaperBackground, pixelFont, Statement, Wordmark } from "./components";
+import {
+  Cursor,
+  PaperBackground,
+  pixelFont,
+  Statement,
+  TypeOn,
+  Wordmark,
+  WordPop,
+} from "./components";
 
 /* -------------------------------------------------------------------------- */
 /* Beat — fade in/out envelope for one full-screen moment                      */
@@ -97,10 +105,10 @@ const StatueBeat: React.FC = () => {
           }}
         >
           <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
-            prove it,
+            make features
           </div>
           <div style={{ fontFamily: pixelFont, fontSize: 104, color: theme.ink, lineHeight: 1.04 }}>
-            then build it.
+            earn their place.
           </div>
         </div>
       </AbsoluteFill>
@@ -209,6 +217,60 @@ const ToolBeat: React.FC<{
   );
 };
 
+/* Embed beat — code card showing morf wrapping an existing app */
+const EmbedBeat: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const s = spring({ frame, fps, config: { damping: 200, stiffness: 55 } });
+  const rise = interpolate(s, [0, 1], [30, 0]);
+  const CODE: { text: string; dim?: boolean; indent?: number }[] = [
+    { text: "$ npm install morf", dim: true },
+    { text: "" },
+    { text: "<MorfProvider>" },
+    { text: "<YourApp />", indent: 1 },
+    { text: "</MorfProvider>" },
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 56 }}>
+      <div
+        style={{
+          opacity: s,
+          transform: `translateY(${rise}px)`,
+          border: `3px solid ${theme.ink}`,
+          borderRadius: 16,
+          background: "#ffffff",
+          boxShadow: "0 26px 70px rgba(0,0,0,0.12)",
+          padding: "54px 84px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}
+      >
+        {CODE.map((ln, i) => {
+          const on = frame > 14 + i * 9;
+          return (
+            <div
+              key={i}
+              style={{
+                fontFamily: pixelFont,
+                fontSize: 46,
+                lineHeight: 1.15,
+                color: ln.dim ? theme.inkSoft : theme.ink,
+                paddingLeft: (ln.indent ?? 0) * 56,
+                opacity: on ? 1 : 0,
+                minHeight: ln.text ? undefined : 20,
+              }}
+            >
+              {ln.text}
+            </div>
+          );
+        })}
+      </div>
+      <Statement lines={["wraps any site.", "two lines. done."]} fontSize={76} startFrame={16} />
+    </div>
+  );
+};
+
 /* Daytona spotlight — logo inside a live "sandbox" window with a running dot */
 const DaytonaBeat: React.FC = () => {
   const frame = useCurrentFrame();
@@ -262,7 +324,7 @@ const DaytonaBeat: React.FC = () => {
         </div>
       </div>
       <Statement
-        lines={["each build runs live —", "a real app in seconds."]}
+        lines={["every build boots live.", "a real app in seconds."]}
         fontSize={78}
         startFrame={10}
       />
@@ -313,16 +375,16 @@ export const MorphAd: React.FC = () => {
 
   // ---- the arc ----------------------------------------------------------
   const intro = at(115); //  morf
-  const domain = at(106); //  your software, any domain            (universal)
-  const req = at(110); //  users keep requesting features        (the asks)
-  const waste = at(122); //  devs build them — most flop           (the waste / no ROI)
-  const statue = at(180); //  prove it, then build it               (the flip)
-  const desc = at(110); //  a user just describes the change      (self-serve)
+  const req = at(110); //  your users want more                  (hook)
+  const waste = at(122); //  devs guess, build, it flops           (the waste)
+  const statue = at(180); //  make features earn their place        (the flip)
+  const embed = at(175); //  wraps any existing site               (integration)
+  const desc = at(108); //  someone types a wish                  (self-serve)
   const fw = at(120); //  Fireworks: 3 models race               (tool)
-  const day = at(168); //  Daytona: each runs live in a sandbox   (tool — spotlight)
+  const day = at(168); //  Daytona: every build boots live        (tool, spotlight)
   const bt = at(120); //  Braintrust: scored, nothing breaks     (tool)
-  const test = at(124); //  real users try it, you see what sticks (validation)
-  const ship = at(130); //  useful? devs polish + ship it for real (payoff)
+  const test = at(124); //  real users hit it                      (validation)
+  const ship = at(130); //  winners get polished and shipped       (payoff)
   const outro = at(150); //  morf / the app that builds itself
 
   const H = 90; // headline size for Jersey15 landscape
@@ -337,21 +399,19 @@ export const MorphAd: React.FC = () => {
         </Beat>
       </Sequence>
 
-      <Sequence from={domain.from} durationInFrames={domain.len}>
-        <Beat durationInFrames={domain.len}>
-          <Statement lines={["your software.", "any domain."]} fontSize={H} />
-        </Beat>
-      </Sequence>
-
       <Sequence from={req.from} durationInFrames={req.len}>
         <Beat durationInFrames={req.len}>
-          <Statement lines={["users keep asking", "for new features."]} fontSize={H} />
+          <WordPop lines={["your users want more.", "they always do."]} fontSize={H} />
         </Beat>
       </Sequence>
 
       <Sequence from={waste.from} durationInFrames={waste.len}>
         <Beat durationInFrames={waste.len}>
-          <Statement lines={["devs build them —", { text: "most go unused.", accent: true }]} fontSize={H} />
+          <WordPop
+            lines={["so devs guess, build,", { text: "and watch it flop.", accent: true }]}
+            fontSize={H}
+            wordStagger={9}
+          />
         </Beat>
       </Sequence>
 
@@ -361,9 +421,15 @@ export const MorphAd: React.FC = () => {
         </Beat>
       </Sequence>
 
+      <Sequence from={embed.from} durationInFrames={embed.len}>
+        <Beat durationInFrames={embed.len} fadeIn={24} fadeOut={22}>
+          <EmbedBeat />
+        </Beat>
+      </Sequence>
+
       <Sequence from={desc.from} durationInFrames={desc.len}>
         <Beat durationInFrames={desc.len}>
-          <Statement lines={["a user just", "describes the change."]} fontSize={H} />
+          <TypeOn lines={["now a user", "types a wish."]} fontSize={H} cps={26} />
         </Beat>
       </Sequence>
 
@@ -389,7 +455,7 @@ export const MorphAd: React.FC = () => {
           <ToolBeat
             img="logos/braintrust.png"
             logoH={104}
-            lines={["scored and safe —", { text: "nothing breaks.", accent: true }]}
+            lines={["every attempt scored.", { text: "nothing ships broken.", accent: true }]}
             fontSize={H}
           />
         </Beat>
@@ -397,13 +463,17 @@ export const MorphAd: React.FC = () => {
 
       <Sequence from={test.from} durationInFrames={test.len}>
         <Beat durationInFrames={test.len}>
-          <Statement lines={["real users try it.", "you see what sticks."]} fontSize={H} />
+          <WordPop lines={["real users hit it.", "data picks the winners."]} fontSize={H} />
         </Beat>
       </Sequence>
 
       <Sequence from={ship.from} durationInFrames={ship.len}>
         <Beat durationInFrames={ship.len}>
-          <Statement lines={["what works, devs polish,", { text: "secure, and ship.", accent: true }]} fontSize={H} />
+          <WordPop
+            lines={["the keepers get polished,", { text: "secured, and shipped.", accent: true }]}
+            fontSize={H}
+            wordStagger={8}
+          />
         </Beat>
       </Sequence>
 

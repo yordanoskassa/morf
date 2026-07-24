@@ -18,15 +18,20 @@ async def _history_text() -> str:
     return "\n".join(lines)
 
 
-def _morph_doc(prompt: str, candidates: list[CandidateResult], winner: CandidateResult | None, sha: str | None) -> dict:
+def _morph_doc(prompt: str, candidates: list[CandidateResult], winner: CandidateResult | None,
+               sha: str | None, author: str = "anon", restored_from: str | None = None) -> dict:
     return {
         "prompt": prompt,
+        "author": author,
+        "restored_from": restored_from,
+        "votes": {},
         "shipped": sha is not None,
         "commit_sha": sha,
         "undone": False,
         "winner": None if winner is None else {
             "racer": winner.racer, "model": winner.model, "summary": winner.summary,
             "total_ms": winner.total_ms, "span_id": winner.span_id, "commit_sha": sha,
+            "files": [{"path": f.path, "content": f.content} for f in winner.files],
         },
         "candidates": [
             {"racer": c.racer, "model": c.model, "edit_type": c.edit_type,
@@ -157,7 +162,8 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
         sha = await daytona_runner.ship(winner.files, message=f"morph: {winner.summary}")
         resp.shipped = sha is not None
         resp.commit_sha = sha
-    await store.save_morph(_morph_doc(req.prompt, candidates, winner, resp.commit_sha))
+    resp.morph_id = await store.save_morph(
+        _morph_doc(req.prompt, candidates, winner, resp.commit_sha, author=req.user_name or "anon"))
     return resp
 
 
@@ -210,6 +216,37 @@ async def _candidate_stream(emit, racer, prompt: str, focus: list[str], history:
     return c
 
 
+async def restore(morph_id: str, user_name: str = "anon") -> dict:
+    """Restore-forward: re-apply a past version's files as a NEW timeline node.
+    History is preserved — you can always restore something else later."""
+    doc = await store.get_morph(morph_id)
+    if not doc:
+        return {"ok": False, "error": "not found"}
+    w = doc.get("winner") or {}
+    files_raw = w.get("files") or []
+    if not files_raw:
+        return {"ok": False, "error": "that version has no saved files to restore"}
+
+    files = [FileEdit(path=f["path"], content=f["content"]) for f in files_raw]
+    ok, reason = check_files([f.path for f in files])
+    if not ok:
+        return {"ok": False, "error": reason}
+
+    _apply_local(files)   # local → HMR
+    sha = await daytona_runner.ship(files, message=f"restore: {doc.get('prompt', '')[:60]}")
+
+    # record the restore as its own node (author = whoever restored)
+    fake_winner = CandidateResult(
+        racer=w.get("racer", "restore"), model=w.get("model", ""),
+        edit_type="restore", summary=f"restored: {doc.get('prompt', '')}",
+        files=files, compiled=True, rendered=True, chat_ok=True, won=True,
+    )
+    new_id = await store.save_morph(_morph_doc(
+        f"restore: {doc.get('prompt', '')}", [fake_winner], fake_winner, sha,
+        author=user_name, restored_from=morph_id))
+    return {"ok": True, "morph_id": new_id, "commit_sha": sha}
+
+
 async def run_morph_stream(req: MorphRequest):
     """Async generator of progress events. Terminates with a 'done' event carrying
     the full MorphResponse."""
@@ -253,7 +290,8 @@ async def run_morph_stream(req: MorphRequest):
             else:
                 await emit({"type": "no_winner", "detail": "no candidate compiled + rendered + kept the chat"})
 
-            await store.save_morph(_morph_doc(req.prompt, cands, winner, resp.commit_sha))
+            resp.morph_id = await store.save_morph(
+                _morph_doc(req.prompt, cands, winner, resp.commit_sha, author=req.user_name or "anon"))
             await emit({"type": "done", "result": resp.model_dump()})
         except Exception as e:  # noqa: BLE001
             await emit({"type": "error", "error": f"{type(e).__name__}: {e}"})

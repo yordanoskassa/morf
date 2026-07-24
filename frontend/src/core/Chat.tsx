@@ -190,7 +190,7 @@ export function Chat() {
         className="fixed z-50 flex items-center gap-2 rounded-full border border-white/10 bg-background/70 px-4 py-2 text-sm font-medium shadow-2xl backdrop-blur-xl hover:bg-background/90"
       >
         <span className={`h-2 w-2 rounded-full ${busy ? 'animate-pulse bg-emerald-400' : 'bg-violet-400'}`} />
-        morph
+        morf
       </button>
     )
   }
@@ -210,7 +210,7 @@ export function Chat() {
           className="pointer-events-none select-none rounded-xl border border-white/15 bg-neutral-950/85 px-4 py-1 leading-none text-white shadow-lg backdrop-blur-xl"
           style={{ fontFamily: '"Jersey 15", monospace', letterSpacing: '0.02em', textShadow: '0 0 14px rgba(255,255,255,0.35)' }}
         >
-          <span className="text-3xl">morph</span>
+          <span className="text-3xl">morf</span>
         </div>
       </div>
 
@@ -255,7 +255,7 @@ export function Chat() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={busy ? 'morphing…' : 'Describe a change to the app…'}
+          placeholder={busy ? 'morfing…' : 'Describe a change to the app…'}
           className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
         />
 
@@ -276,7 +276,7 @@ export function Chat() {
         <button type="button" title="minimize" onClick={() => setMinimized(true)}
           className="rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-white/10 hover:text-foreground">—</button>
 
-        <Button type="submit" size="sm" className="h-8 rounded-full px-4 bg-[#39FF14] text-black shadow-[0_0_15px_#39FF14] hover:bg-[#39FF14]/90">Morph</Button>
+        <Button type="submit" size="sm" className="h-8 rounded-full px-4 bg-[#39FF14] text-black shadow-[0_0_15px_#39FF14] hover:bg-[#39FF14]/90">Morf</Button>
       </form>
     </div>
   )

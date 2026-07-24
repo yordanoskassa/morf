@@ -57,7 +57,7 @@ export const Cursor: React.FC<{ color?: string; size?: number }> = ({
 };
 
 /* -------------------------------------------------------------------------- */
-/* Logo — big pixel wordmark with a rare, gentle 1-frame flicker               */
+/* Logo — big pixel wordmark, letters assemble one by one                      */
 /* -------------------------------------------------------------------------- */
 export const Wordmark: React.FC<{
   children: string;
@@ -67,28 +67,138 @@ export const Wordmark: React.FC<{
 }> = ({ children, fontSize, startFrame = 0, color = theme.ink }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const s = spring({
-    frame: frame - startFrame,
-    fps,
-    config: { damping: 200, mass: 1.1, stiffness: 60 },
-  });
-  const rise = interpolate(s, [0, 1], [26, 0]);
   // rare subtle flicker — as if the program is re-writing itself
   const flick = random(`fl${Math.floor(frame / 6)}`) > 0.93 ? 0.82 : 1;
   return (
-    <span
-      style={{
-        fontFamily: pixelFont,
-        fontSize,
-        color,
-        letterSpacing: "0.01em",
-        transform: `translateY(${rise}px)`,
-        opacity: s * flick,
-        display: "inline-block",
-      }}
-    >
-      {children}
+    <span style={{ display: "inline-flex", opacity: flick }}>
+      {children.split("").map((ch, i) => {
+        const s = spring({
+          frame: frame - startFrame - i * 5,
+          fps,
+          config: { damping: 16, mass: 0.7, stiffness: 120 },
+        });
+        const rise = interpolate(s, [0, 1], [50, 0]);
+        const sc = interpolate(s, [0, 1], [1.35, 1]);
+        return (
+          <span
+            key={i}
+            style={{
+              fontFamily: pixelFont,
+              fontSize,
+              color,
+              letterSpacing: "0.01em",
+              transform: `translateY(${rise}px) scale(${sc})`,
+              opacity: Math.min(1, s * 1.4),
+              display: "inline-block",
+            }}
+          >
+            {ch}
+          </span>
+        );
+      })}
     </span>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* WordPop — words spring in one at a time with a little overshoot            */
+/* -------------------------------------------------------------------------- */
+export const WordPop: React.FC<{
+  lines: (string | { text: string; accent?: boolean; soft?: boolean })[];
+  fontSize?: number;
+  startFrame?: number;
+  gap?: number;
+  wordStagger?: number;
+}> = ({ lines, fontSize = 90, startFrame = 0, gap = 22, wordStagger = 7 }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  let wordIndex = 0;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap, alignItems: "center", textAlign: "center" }}>
+      {lines.map((ln, li) => {
+        const obj = typeof ln === "string" ? { text: ln } : ln;
+        const color = obj.accent ? theme.accent : obj.soft ? theme.inkSoft : theme.ink;
+        const words = obj.text.split(" ");
+        return (
+          <div key={li} style={{ display: "flex", gap: "0.32em", whiteSpace: "nowrap" }}>
+            {words.map((w, wi) => {
+              const idx = wordIndex++;
+              const s = spring({
+                frame: frame - startFrame - idx * wordStagger,
+                fps,
+                config: { damping: 13, mass: 0.6, stiffness: 130 },
+              });
+              const sc = interpolate(s, [0, 1], [0.55, 1]);
+              const rise = interpolate(s, [0, 1], [26, 0]);
+              return (
+                <span
+                  key={wi}
+                  style={{
+                    fontFamily: pixelFont,
+                    fontSize: obj.soft ? fontSize * 0.62 : fontSize,
+                    color,
+                    lineHeight: 1.5,
+                    display: "inline-block",
+                    transform: `translateY(${rise}px) scale(${sc})`,
+                    opacity: Math.min(1, s * 1.5),
+                  }}
+                >
+                  {w}
+                </span>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* TypeOn — typewriter reveal with blinking block cursor                       */
+/* -------------------------------------------------------------------------- */
+export const TypeOn: React.FC<{
+  lines: (string | { text: string; accent?: boolean })[];
+  fontSize?: number;
+  startFrame?: number;
+  cps?: number;
+  gap?: number;
+}> = ({ lines, fontSize = 90, startFrame = 0, cps = 24, gap = 22 }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const chars = Math.max(0, Math.floor(((frame - startFrame) / fps) * cps));
+  let used = 0;
+  const total = lines.reduce(
+    (n, ln) => n + (typeof ln === "string" ? ln : ln.text).length,
+    0
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap, alignItems: "center", textAlign: "center" }}>
+      {lines.map((ln, li) => {
+        const obj = typeof ln === "string" ? { text: ln } : ln;
+        const color = obj.accent ? theme.accent : theme.ink;
+        const avail = Math.max(0, Math.min(obj.text.length, chars - used));
+        const isTypingHere = chars >= used && chars < used + obj.text.length;
+        const isLastLine = li === lines.length - 1;
+        used += obj.text.length;
+        return (
+          <div
+            key={li}
+            style={{
+              fontFamily: pixelFont,
+              fontSize,
+              color,
+              lineHeight: 1.5,
+              whiteSpace: "nowrap",
+              minHeight: fontSize * 1.5,
+            }}
+          >
+            {obj.text.slice(0, avail)}
+            {(isTypingHere || (isLastLine && chars >= total)) && <Cursor color={color} />}
+          </div>
+        );
+      })}
+    </div>
   );
 };
 

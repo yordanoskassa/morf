@@ -6,8 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from . import braintrust_logger, elevenlabs_voice, store
-from .morph_engine import run_morph, run_morph_stream
-from .schemas import MorphRequest, MorphResponse, UndoRequest, ScoreboardResponse
+from .morph_engine import run_morph, run_morph_stream, restore as restore_morph
+from .schemas import (
+    MorphRequest, MorphResponse, UndoRequest, ScoreboardResponse,
+    VoteRequest, RestoreRequest, TimelineResponse,
+)
 
 app = FastAPI(title="Morph — a coding chat that builds itself")
 
@@ -57,6 +60,25 @@ async def scoreboard() -> ScoreboardResponse:
     if store.enabled():
         return await store.scoreboard()
     return await braintrust_logger.scoreboard()
+
+
+@app.get("/timeline", response_model=TimelineResponse)
+async def timeline(user_id: str = "") -> TimelineResponse:
+    """The voted timeline of morphs — everyone's changes, newest first."""
+    return TimelineResponse(**(await store.timeline(user_id)))
+
+
+@app.post("/vote")
+async def vote(req: VoteRequest) -> dict:
+    """Vote up/down anyone's change (multi-user demand signal)."""
+    await store.add_vote(req.morph_id, req.user_id, req.value)
+    return {"ok": True}
+
+
+@app.post("/restore")
+async def restore(req: RestoreRequest) -> dict:
+    """Restore-forward: make a past version live again as a new node."""
+    return await restore_morph(req.morph_id, req.user_name or "anon")
 
 
 @app.get("/voice/signed-url")

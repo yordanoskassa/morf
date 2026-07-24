@@ -5,13 +5,19 @@
 import { useState } from 'react'
 import { Chat } from '@/core/Chat'
 import { Scoreboard } from '@/core/Scoreboard'
+import { Timeline } from '@/core/Timeline'
+import { LoginGate, useAuth } from '@/core/Login'
 import Stage from '@/stage/Stage'
 import { Toaster } from '@/components/ui/sonner'
+
+const darkGlass = 'rounded-2xl border border-white/10 bg-neutral-950/90 text-neutral-100 shadow-2xl backdrop-blur-xl'
 
 const glass = 'rounded-2xl border border-black/10 bg-white/80 shadow-2xl backdrop-blur-xl'
 
 export default function App() {
+  const { user, login } = useAuth()
   const [sbOpen, setSbOpen] = useState(false)
+  const [tlOpen, setTlOpen] = useState(false)
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -28,7 +34,7 @@ export default function App() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <span className="text-lg font-bold text-primary">M</span>
             </div>
-            <span className="text-sm font-semibold">Morph Dashboard</span>
+            <span className="text-sm font-semibold">Morf Dashboard</span>
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -102,10 +108,26 @@ export default function App() {
         </button>
       )}
 
+      {/* collapsible voted timeline, bottom-left */}
+      {tlOpen ? (
+        <div className={`absolute bottom-4 left-4 max-h-[70vh] w-[320px] overflow-hidden ${darkGlass}`}>
+          <button onClick={() => setTlOpen(false)}
+            className="absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-xs text-neutral-400 hover:bg-white/10 hover:text-white" title="hide">—</button>
+          <Timeline />
+        </div>
+      ) : (
+        <button onClick={() => setTlOpen(true)}
+          className={`absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 text-sm font-medium ${darkGlass} hover:brightness-110`}>
+          🕒 timeline · vote
+        </button>
+      )}
+
       {/* the chat floats and positions itself (movable + minimizable) */}
       <Chat />
 
       <Toaster position="top-center" />
+
+      {!user && <LoginGate onLogin={login} />}
     </div>
   )
 }
