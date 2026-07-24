@@ -23,8 +23,8 @@ export default function App() {
     <div className="relative h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* ambient backdrop */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white via-background to-muted" />
-      <div className="pointer-events-none absolute -left-40 top-1/4 h-96 w-96 rounded-full bg-lime-600/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-40 bottom-1/4 h-96 w-96 rounded-full bg-green-700/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-40 top-1/4 h-96 w-96 rounded-full bg-red-600/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-40 bottom-1/4 h-96 w-96 rounded-full bg-red-700/10 blur-3xl" />
 
       {/* layout: header + sidebar + main */}
       <div className="absolute inset-0 flex flex-col">
@@ -34,7 +34,7 @@ export default function App() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <span className="text-lg font-bold text-primary">M</span>
             </div>
-            <span className="text-sm font-semibold">yes indeed its the winner 🏆</span>
+            <span className="text-sm font-semibold">this could be anything</span>
           </div>
           <div className="flex items-center gap-2">
             <input
