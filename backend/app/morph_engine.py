@@ -1,24 +1,41 @@
 """Orchestrates one morph: guard -> race 3 models -> sandbox each -> score -> ship. 🔒 immutable."""
 from __future__ import annotations
 import asyncio
-from collections import deque
 
-from . import config, models, daytona_runner, braintrust_logger
+from . import config, models, daytona_runner, braintrust_logger, store
 from .immutable_guard import check_files, is_kernel, in_app, REPO_ROOT
 from .schemas import MorphRequest, MorphResponse, CandidateResult, MorphPlan, FileEdit
 
 
-# --- conversation memory: a rolling one-line log of recent morphs (cheap on context) ---
-_HISTORY: deque = deque(maxlen=8)
+# --- conversation memory: a rolling one-line log of recent morphs, from Mongo (cheap) ---
+async def _history_text() -> str:
+    docs = await store.recent_prompts(8)
+    lines = []
+    for d in docs:
+        w = d.get("winner")
+        outcome = f"shipped by {w['racer']} ({w.get('summary', '')})" if w else "no candidate survived"
+        lines.append(f'- "{d.get("prompt", "")}" → {outcome}')
+    return "\n".join(lines)
 
 
-def _history_text() -> str:
-    return "\n".join(f"- \"{h['prompt']}\" → {h['outcome']}" for h in _HISTORY)
-
-
-def _remember(prompt: str, winner: CandidateResult | None) -> None:
-    outcome = f"shipped by {winner.racer} ({winner.summary})" if winner else "no candidate survived"
-    _HISTORY.append({"prompt": prompt, "outcome": outcome})
+def _morph_doc(prompt: str, candidates: list[CandidateResult], winner: CandidateResult | None, sha: str | None) -> dict:
+    return {
+        "prompt": prompt,
+        "shipped": sha is not None,
+        "commit_sha": sha,
+        "undone": False,
+        "winner": None if winner is None else {
+            "racer": winner.racer, "model": winner.model, "summary": winner.summary,
+            "total_ms": winner.total_ms, "span_id": winner.span_id, "commit_sha": sha,
+        },
+        "candidates": [
+            {"racer": c.racer, "model": c.model, "edit_type": c.edit_type,
+             "compiled": c.compiled, "rendered": c.rendered, "chat_ok": c.chat_ok,
+             "blocked": c.blocked, "won": c.won, "gen_ms": c.gen_ms, "build_ms": c.build_ms,
+             "render_ms": c.render_ms, "total_ms": c.total_ms, "span_id": c.span_id}
+            for c in candidates
+        ],
+    }
 
 
 def _resolve_files(plan: MorphPlan) -> list[FileEdit]:
@@ -107,7 +124,7 @@ async def _run_candidate(prompt: str, racer, plan: MorphPlan | None, gen_ms: int
 
 async def run_morph(req: MorphRequest) -> MorphResponse:
     # 1. race the 3 models (with a short memory of recent changes)
-    raced = await models.race(req.prompt, req.focus, _history_text())
+    raced = await models.race(req.prompt, req.focus, await _history_text())
 
     # warm the baked image once so concurrent sandbox creates don't race the build
     await daytona_runner.ensure_warm()
@@ -140,7 +157,7 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
         sha = await daytona_runner.ship(winner.files, message=f"morph: {winner.summary}")
         resp.shipped = sha is not None
         resp.commit_sha = sha
-    _remember(req.prompt, winner)
+    await store.save_morph(_morph_doc(req.prompt, candidates, winner, resp.commit_sha))
     return resp
 
 
@@ -208,7 +225,7 @@ async def run_morph_stream(req: MorphRequest):
             if not daytona_runner.is_warm():
                 await emit({"type": "warming", "detail": "warming the sandbox image (first run only)"})
                 await daytona_runner.ensure_warm()
-            hist = _history_text()
+            hist = await _history_text()
             cands = await asyncio.gather(
                 *(_candidate_stream(emit, r, req.prompt, req.focus, hist) for r in config.RACERS)
             )
@@ -236,7 +253,7 @@ async def run_morph_stream(req: MorphRequest):
             else:
                 await emit({"type": "no_winner", "detail": "no candidate compiled + rendered + kept the chat"})
 
-            _remember(req.prompt, winner)
+            await store.save_morph(_morph_doc(req.prompt, cands, winner, resp.commit_sha))
             await emit({"type": "done", "result": resp.model_dump()})
         except Exception as e:  # noqa: BLE001
             await emit({"type": "error", "error": f"{type(e).__name__}: {e}"})

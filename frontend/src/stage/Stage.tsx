@@ -542,7 +542,7 @@ export default function Stage() {
         </CardContent>
       </Card>
 
-      <footer className="mt-2 text-center text-xs text-muted-foreground">
+      <footer className="mt-2 text-center text-sm text-muted-foreground">
         © 2026 Morph Dashboard · built by racing models · {range} view
       </footer>
     </div>

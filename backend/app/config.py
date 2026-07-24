@@ -58,6 +58,11 @@ DEPS_VERSION = os.getenv("DEPS_VERSION", "1")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID", "")
 
+# MongoDB — the consistent operational store: every morph is persisted here, and the
+# scoreboard + conversation memory + undo all read from it (single source of truth).
+MONGODB_URI = os.getenv("MONGODB_URI", "")
+MONGODB_DB = os.getenv("MONGODB_DB", "morph")
+
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")          # "owner/repo"
 GITHUB_USER = os.getenv("GITHUB_USER", "morph-bot")

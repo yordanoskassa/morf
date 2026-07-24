@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from . import braintrust_logger, elevenlabs_voice
+from . import braintrust_logger, elevenlabs_voice, store
 from .morph_engine import run_morph, run_morph_stream
 from .schemas import MorphRequest, MorphResponse, UndoRequest, ScoreboardResponse
 
@@ -45,15 +45,17 @@ async def morph_stream(req: MorphRequest) -> StreamingResponse:
 
 @app.post("/undo")
 async def undo(req: UndoRequest) -> dict:
-    """User reverted a morph — flip its undo score and (optionally) revert the commit."""
-    braintrust_logger.log_undo(req.span_id)
-    # commit revert via Daytona is intentionally left to a follow-up job; the quality
-    # signal (undo score) is what the scoreboard needs and lands immediately.
+    """User reverted a morph — flip its undo signal in Mongo + Braintrust."""
+    await store.mark_undo(req.span_id)          # consistent source of truth
+    braintrust_logger.log_undo(req.span_id)     # scoring layer
     return {"ok": True}
 
 
 @app.get("/scoreboard", response_model=ScoreboardResponse)
 async def scoreboard() -> ScoreboardResponse:
+    # Mongo is the consistent source of truth; fall back to Braintrust if it's off.
+    if store.enabled():
+        return await store.scoreboard()
     return await braintrust_logger.scoreboard()
 
 
