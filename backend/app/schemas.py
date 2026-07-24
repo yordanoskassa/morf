@@ -41,6 +41,7 @@ class CandidateResult(BaseModel):
     preview_url: str | None = None
     span_id: str | None = None         # braintrust span id (for later undo feedback)
     score: float = 0.0                 # composite ranking score
+    won: bool = False                  # this candidate won its morph
 
 
 class MorphResponse(BaseModel):
@@ -66,6 +67,34 @@ class ScoreboardRow(BaseModel):
     n: int
 
 
+class ModelStat(BaseModel):
+    model: str
+    n: int
+    wins: int
+    win_rate: float
+    compile_rate: float
+    render_rate: float
+    chat_rate: float
+    quality: float                     # 1 - undo_rate
+    p50_latency_ms: float
+    gen_ms: float
+    build_ms: float
+    render_ms: float
+
+
+class ScoreboardKPIs(BaseModel):
+    morphs: int
+    candidates: int
+    ship_rate: float                   # fraction of morphs that produced a winner
+    quality: float                     # 1 - undo_rate overall
+    compile_rate: float
+    render_rate: float
+    chat_rate: float
+    p50_latency_ms: float
+
+
 class ScoreboardResponse(BaseModel):
-    rows: list[ScoreboardRow]
+    kpis: ScoreboardKPIs
+    models: list[ModelStat]            # per-model leaderboard
+    rows: list[ScoreboardRow]          # per model x edit_type
     timeseries: list[dict]             # [{created, quality, model}] for the climbing chart

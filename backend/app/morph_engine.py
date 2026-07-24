@@ -68,16 +68,18 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
         *(_run_candidate(req.prompt, r, plan, gen_ms, err) for r, plan, gen_ms, err in raced)
     )
 
-    # 3. log every candidate as a Braintrust span, capture ids for undo feedback
+    # 3. pick winner: must compile, render, AND keep the chat alive (survival invariant)
+    eligible = [c for c in candidates if c.compiled and c.rendered and c.chat_ok and not c.blocked]
+    winner = max(eligible, key=_composite) if eligible else None
+    if winner is not None:
+        winner.won = True
+
+    # 4. log every candidate as a Braintrust span, capture ids for undo feedback
     for c in candidates:
         try:
             c.span_id = braintrust_logger.log_morph(req.prompt, c)
         except Exception:  # noqa: BLE001 — logging must never break a morph
             c.span_id = None
-
-    # 4. pick winner: must compile, render, AND keep the chat alive (survival invariant)
-    eligible = [c for c in candidates if c.compiled and c.rendered and c.chat_ok and not c.blocked]
-    winner = max(eligible, key=_composite) if eligible else None
 
     resp = MorphResponse(winner=winner, candidates=sorted(candidates, key=_composite, reverse=True))
 
@@ -150,14 +152,16 @@ async def run_morph_stream(req: MorphRequest):
             cands = await asyncio.gather(
                 *(_candidate_stream(emit, r, req.prompt, req.focus) for r in config.RACERS)
             )
+            eligible = [c for c in cands if c.compiled and c.rendered and c.chat_ok and not c.blocked]
+            winner = max(eligible, key=_composite) if eligible else None
+            if winner is not None:
+                winner.won = True
+
             for c in cands:
                 try:
                     c.span_id = braintrust_logger.log_morph(req.prompt, c)
                 except Exception:  # noqa: BLE001
                     c.span_id = None
-
-            eligible = [c for c in cands if c.compiled and c.rendered and c.chat_ok and not c.blocked]
-            winner = max(eligible, key=_composite) if eligible else None
             resp = MorphResponse(winner=winner, candidates=sorted(cands, key=_composite, reverse=True))
 
             if winner is not None:

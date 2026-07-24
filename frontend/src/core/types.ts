@@ -40,7 +40,35 @@ export interface ScoreboardRow {
   n: number
 }
 
+export interface ModelStat {
+  model: string
+  n: number
+  wins: number
+  win_rate: number
+  compile_rate: number
+  render_rate: number
+  chat_rate: number
+  quality: number
+  p50_latency_ms: number
+  gen_ms: number
+  build_ms: number
+  render_ms: number
+}
+
+export interface ScoreboardKPIs {
+  morphs: number
+  candidates: number
+  ship_rate: number
+  quality: number
+  compile_rate: number
+  render_rate: number
+  chat_rate: number
+  p50_latency_ms: number
+}
+
 export interface ScoreboardResponse {
+  kpis: ScoreboardKPIs
+  models: ModelStat[]
   rows: ScoreboardRow[]
   timeseries: { created: string; model: string; quality: number }[]
 }

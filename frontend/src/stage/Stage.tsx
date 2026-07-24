@@ -40,10 +40,10 @@ const revenue = [
 ]
 
 const distribution = [
-  { name: 'Direct', value: 35, color: '#8b5cf6' },
-  { name: 'Social', value: 25, color: '#06b6d4' },
-  { name: 'Organic', value: 30, color: '#10b981' },
-  { name: 'Referral', value: 10, color: '#f59e0b' },
+  { name: 'Direct', value: 35, color: '#ec4899' },
+  { name: 'Social', value: 25, color: '#f472b6' },
+  { name: 'Organic', value: 30, color: '#db2777' },
+  { name: 'Referral', value: 10, color: '#fda4af' },
 ]
 
 const recent = [
@@ -96,7 +96,7 @@ export default function Stage() {
               <CardTitle className="text-2xl">{k.value}</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge className={k.good ? 'bg-emerald-600' : 'bg-amber-500'}>{k.change}</Badge>
+              <Badge className={k.good ? 'bg-pink-600' : 'bg-rose-400'}>{k.change}</Badge>
               <span className="ml-2 text-xs text-muted-foreground">vs last {range}</span>
             </CardContent>
           </Card>
@@ -121,12 +121,12 @@ export default function Stage() {
                 <AreaChart data={traffic} margin={{ top: 8, right: 16, bottom: 0, left: -20 }}>
                   <defs>
                     <linearGradient id="visits" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#ec4899" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="unique" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#f472b6" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#f472b6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
@@ -139,8 +139,8 @@ export default function Stage() {
                       borderRadius: '0.5rem',
                     }}
                   />
-                  <Area type="monotone" dataKey="visits" stroke="#8b5cf6" strokeWidth={2} fill="url(#visits)" />
-                  <Area type="monotone" dataKey="unique" stroke="#06b6d4" strokeWidth={2} fill="url(#unique)" />
+                  <Area type="monotone" dataKey="visits" stroke="#ec4899" strokeWidth={2} fill="url(#visits)" />
+                  <Area type="monotone" dataKey="unique" stroke="#f472b6" strokeWidth={2} fill="url(#unique)" />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
@@ -165,7 +165,7 @@ export default function Stage() {
                       borderRadius: '0.5rem',
                     }}
                   />
-                  <Bar dataKey="value" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="value" fill="#ec4899" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -231,7 +231,7 @@ export default function Stage() {
                       variant={
                         item.status === 'success' ? 'default' : item.status === 'warning' ? 'secondary' : 'destructive'
                       }
-                      className={item.status === 'success' ? 'bg-emerald-600' : undefined}
+                      className={item.status === 'success' ? 'bg-pink-600' : undefined}
                     >
                       {item.status}
                     </Badge>
@@ -257,11 +257,11 @@ export default function Stage() {
               <div key={s.name} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
                   <span>{s.name}</span>
-                  <span className={s.status === 'Operational' ? 'text-emerald-400' : 'text-amber-400'}>{s.status}</span>
+                  <span className={s.status === 'Operational' ? 'text-pink-400' : 'text-rose-300'}>{s.status}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full ${s.status === 'Operational' ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    className={`h-full rounded-full ${s.status === 'Operational' ? 'bg-pink-500' : 'bg-rose-400'}`}
                     style={{ width: `${s.load}%` }}
                   />
                 </div>
