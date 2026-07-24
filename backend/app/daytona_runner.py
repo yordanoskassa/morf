@@ -48,6 +48,7 @@ class EvalOut:
     render_ms: int = 0
     build_log: str = ""
     preview_url: str | None = None
+    sandbox_id: str | None = None    # kept alive so the winner's preview stays live
     error: str = ""
 
 
@@ -146,6 +147,7 @@ async def evaluate(files: list[FileEdit], emit_step=None) -> EvalOut:
         async with daytona:
             await step("sandbox", "warm sandbox (deps pre-baked)")
             sandbox = await _create(daytona, keep=False)
+            out.sandbox_id = sandbox.id   # kept alive; orchestrator deletes losers, keeps winner
             await step("sync", "syncing repo to latest main")
             await _sync_repo(sandbox)
             await _write_files(sandbox, files)
@@ -174,11 +176,15 @@ async def evaluate(files: list[FileEdit], emit_step=None) -> EvalOut:
                 "dev",
                 SessionExecuteRequest(command=f"cd {app_dir} && {config.DEV_CMD}", run_async=True),
             )
-            preview = await sandbox.get_preview_link(config.DEV_PORT)
-            out.preview_url = preview.url
-            headers = {"x-daytona-preview-token": preview.token} if preview.token else {}
+            # signed URL: token embedded, so it opens directly in a browser (no header)
+            try:
+                signed = await sandbox.create_signed_preview_url(config.DEV_PORT, expires_in_seconds=3600)
+                out.preview_url = signed.url
+            except Exception:  # noqa: BLE001 — fall back to plain preview link
+                preview = await sandbox.get_preview_link(config.DEV_PORT)
+                out.preview_url = preview.url
             await step("render", "probing preview URL")
-            out.rendered = await _probe(preview.url, headers)
+            out.rendered = await _probe(out.preview_url, {})
             out.render_ms = int((time.perf_counter() - t1) * 1000)
             await step("rendered" if out.rendered else "render_failed",
                        f"{'rendered' if out.rendered else 'no render'} ({out.render_ms}ms)")
@@ -192,12 +198,52 @@ async def evaluate(files: list[FileEdit], emit_step=None) -> EvalOut:
     except Exception as e:  # noqa: BLE001
         out.error = f"{type(e).__name__}: {e}"
         return out
-    finally:
-        if sandbox is not None:
+    # NOTE: no delete here — the orchestrator keeps the winner's sandbox alive (for the
+    # instant live preview) and deletes the losers via keep_live()/delete_sandboxes().
+
+
+# ---- live-preview sandbox lifecycle ----------------------------------------------
+_live_sandbox_id: str | None = None
+
+
+async def delete_sandboxes(ids: list[str]) -> None:
+    ids = [i for i in ids if i]
+    if not ids:
+        return
+    daytona = _daytona()
+    async with daytona:
+        for sid in ids:
             try:
-                await sandbox.delete()   # ephemeral, but delete explicitly to free the pool
+                sb = await daytona.get(sid)
+                await sb.delete()
             except Exception:  # noqa: BLE001
                 pass
+
+
+async def kill_live() -> None:
+    """Sweep ALL sandboxes before the next race — frees the previous live preview and any
+    strays, guaranteeing the full 10GiB tier for the 3-way race. (Sequential morphs only;
+    a concurrent morph's sandboxes would be caught here — fine for a single-driver demo.)"""
+    global _live_sandbox_id
+    _live_sandbox_id = None
+    daytona = _daytona()
+    try:
+        async with daytona:
+            sbs = [sb async for sb in daytona.list()]
+            for sb in sbs:
+                try:
+                    await sb.delete()
+                except Exception:  # noqa: BLE001
+                    pass
+    except Exception:  # noqa: BLE001
+        pass
+
+
+async def keep_live(winner_id: str | None, loser_ids: list[str]) -> None:
+    """Keep the winner's sandbox alive as the live preview; delete the losers."""
+    global _live_sandbox_id
+    await delete_sandboxes(loser_ids)
+    _live_sandbox_id = winner_id
 
 
 async def _anchors_present(sandbox, src_dir: str) -> bool:

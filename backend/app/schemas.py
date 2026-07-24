@@ -44,6 +44,7 @@ class CandidateResult(BaseModel):
     total_ms: int = 0
     build_log: str = ""
     preview_url: str | None = None
+    sandbox_id: str | None = None      # daytona sandbox (winner's kept alive for preview)
     span_id: str | None = None         # braintrust span id (for later undo feedback)
     score: float = 0.0                 # composite ranking score
     won: bool = False                  # this candidate won its morph

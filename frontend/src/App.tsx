@@ -34,7 +34,7 @@ export default function App() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <span className="text-lg font-bold text-primary">M</span>
             </div>
-            <span className="text-sm font-semibold">yes indeed its the winner 🏆</span>
+            <span className="text-sm font-semibold">this could be anything</span>
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -70,12 +70,12 @@ export default function App() {
                   }`}
                 >
                   <span>{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className={item.label === 'Analytics' ? 'font-bold' : ''}>{item.label}</span>
                 </button>
               ))}
             </nav>
             <div className="border-t border-black/10 p-3">
-              <div className="rounded-lg bg-white/50 p-3">
+              <div className="rounded-lg border border-blue-500/50 bg-white/50 p-3">
                 <div className="text-xs font-bold">Pro plan</div>
                 <div className="mt-1 text-[10px] font-bold text-muted-foreground">Upgrade for more features</div>
               </div>

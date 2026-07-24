@@ -121,7 +121,7 @@ async def _run_candidate(prompt: str, racer, plan: MorphPlan | None, gen_ms: int
     ev = await daytona_runner.evaluate(resolved)
     c.compiled, c.rendered, c.chat_ok = ev.compiled, ev.rendered, ev.chat_ok
     c.build_ms, c.render_ms = ev.build_ms, ev.render_ms
-    c.build_log, c.preview_url = ev.build_log, ev.preview_url
+    c.build_log, c.preview_url, c.sandbox_id = ev.build_log, ev.preview_url, ev.sandbox_id
     c.total_ms = gen_ms + ev.build_ms + ev.render_ms
     c.score = _composite(c)
     return c
@@ -131,7 +131,8 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
     # 1. race the 3 models (with a short memory of recent changes)
     raced = await models.race(req.prompt, req.focus, await _history_text())
 
-    # warm the baked image once so concurrent sandbox creates don't race the build
+    # free the previous live preview, then warm the baked image once
+    await daytona_runner.kill_live()
     await daytona_runner.ensure_warm()
 
     # 2. evaluate each candidate concurrently (guard -> sandbox)
@@ -156,12 +157,16 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
 
     # 5. auto-ship the winner (user chose auto-ship + hot-reload)
     if winner is not None:
+        losers = [c.sandbox_id for c in candidates if c is not winner]
+        await daytona_runner.keep_live(winner.sandbox_id, losers)
         # write to the local working copy FIRST → Vite HMR reloads the stage instantly
         _apply_local(winner.files)
         # then push to GitHub as the shipped record
         sha = await daytona_runner.ship(winner.files, message=f"morph: {winner.summary}")
         resp.shipped = sha is not None
         resp.commit_sha = sha
+    else:
+        await daytona_runner.delete_sandboxes([c.sandbox_id for c in candidates])
     resp.morph_id = await store.save_morph(
         _morph_doc(req.prompt, candidates, winner, resp.commit_sha, author=req.user_name or "anon"))
     return resp
@@ -207,7 +212,7 @@ async def _candidate_stream(emit, racer, prompt: str, focus: list[str], history:
     ev = await daytona_runner.evaluate(resolved, emit_step=emit_step)
     c.compiled, c.rendered, c.chat_ok = ev.compiled, ev.rendered, ev.chat_ok
     c.build_ms, c.render_ms = ev.build_ms, ev.render_ms
-    c.build_log, c.preview_url = ev.build_log, ev.preview_url
+    c.build_log, c.preview_url, c.sandbox_id = ev.build_log, ev.preview_url, ev.sandbox_id
     c.total_ms = gen_ms + ev.build_ms + ev.render_ms
     c.score = _composite(c)
     await emit({"type": "eval_done", "racer": racer.key, "compiled": c.compiled,
@@ -259,6 +264,7 @@ async def run_morph_stream(req: MorphRequest):
         try:
             await emit({"type": "start", "prompt": req.prompt,
                         "racers": [{"key": r.key, "role": r.role} for r in config.RACERS]})
+            await daytona_runner.kill_live()   # free the previous live preview before racing
             if not daytona_runner.is_warm():
                 await emit({"type": "warming", "detail": "warming the sandbox image (first run only)"})
                 await daytona_runner.ensure_warm()
@@ -279,15 +285,20 @@ async def run_morph_stream(req: MorphRequest):
             resp = MorphResponse(winner=winner, candidates=sorted(cands, key=_composite, reverse=True))
 
             if winner is not None:
+                # keep the winner's sandbox alive as the live preview; delete the losers
+                losers = [c.sandbox_id for c in cands if c is not winner]
+                await daytona_runner.keep_live(winner.sandbox_id, losers)
                 await emit({"type": "winner", "racer": winner.racer, "summary": winner.summary,
                             "total_ms": winner.total_ms})
                 _apply_local(winner.files)
-                await emit({"type": "applied", "detail": "written locally — HMR reloading"})
-                await emit({"type": "shipping", "detail": "pushing to GitHub"})
+                # show it rendered NOW (built + running in the sandbox) before the git push
+                await emit({"type": "live", "preview_url": winner.preview_url})
+                await emit({"type": "shipping", "detail": "pushing to GitHub (deploy catches up)"})
                 sha = await daytona_runner.ship(winner.files, message=f"morph: {winner.summary}")
                 resp.shipped, resp.commit_sha = sha is not None, sha
                 await emit({"type": "shipped", "commit_sha": sha, "ok": sha is not None})
             else:
+                await daytona_runner.delete_sandboxes([c.sandbox_id for c in cands])
                 await emit({"type": "no_winner", "detail": "no candidate compiled + rendered + kept the chat"})
 
             resp.morph_id = await store.save_morph(

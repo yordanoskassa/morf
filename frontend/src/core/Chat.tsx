@@ -27,6 +27,7 @@ interface Turn {
   prompt: string; live: boolean
   racers: Record<string, RacerLive>
   log: { racer?: string; text: string }[]
+  liveUrl?: string
   result?: MorphResponse; winner?: string; shipped?: { ok: boolean; sha: string | null }
 }
 
@@ -158,6 +159,9 @@ export function Chat() {
             log.push({ racer, text: `WINNER (${ev.total_ms}ms)` })
             return { ...t, racers, log, winner: racer }
           case 'applied': log.push({ text: '✍️  written locally — hot-reloading' }); break
+          case 'live':
+            log.push({ text: '▶ rendered live (deploy catching up)' })
+            return { ...t, racers, log, liveUrl: (ev.preview_url as string) ?? undefined }
           case 'shipping': log.push({ text: '⬆️  pushing to GitHub' }); break
           case 'shipped': log.push({ text: ev.ok ? `✅ shipped ${String(ev.commit_sha ?? '').slice(0, 7)}` : '⚠️ ship failed' }); return { ...t, racers, log, shipped: { ok: ev.ok as boolean, sha: (ev.commit_sha as string) ?? null } }
           case 'no_winner': log.push({ text: '✗ no candidate survived' }); break
@@ -210,6 +214,12 @@ export function Chat() {
               <div key={i} className="space-y-2">
                 <div className="ml-auto w-fit max-w-[85%] rounded-2xl bg-primary px-3 py-1.5 text-sm text-primary-foreground">{t.prompt}</div>
                 {(t.live || t.log.length > 0) && <LiveConsole turn={t} />}
+                {t.liveUrl && (
+                  <a href={t.liveUrl} target="_blank" rel="noreferrer"
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
+                    ▶ see it live now <span className="text-emerald-500/70">· deploy catching up</span>
+                  </a>
+                )}
                 {t.result && (
                   <div className="space-y-1.5 rounded-xl border border-border/50 bg-background/40 p-2">
                     {t.result.candidates.map((c) => (
