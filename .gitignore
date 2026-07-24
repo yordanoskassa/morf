@@ -6,3 +6,6 @@ __pycache__/
 .env
 *.pyc
 .DS_Store
+.env.local
+.env.*.local
+frontend/dist/

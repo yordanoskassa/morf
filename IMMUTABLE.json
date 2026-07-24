@@ -1,24 +1,19 @@
 {
-  "$comment": "Paths a morph may NEVER edit. The morph_engine rejects any candidate diff touching these globs BEFORE it reaches a Daytona sandbox. This file is itself immutable.",
+  "$comment": "Paths a morph may NEVER edit. The morph_engine rejects any candidate diff touching these globs BEFORE it reaches a Daytona sandbox. This file is itself immutable. Morphs may only write files under mutable_roots; they may still IMPORT immutable files (e.g. @/components/ui/*).",
   "protected": [
     "IMMUTABLE.json",
-    "frontend/src/immutable/**",
-    "backend/app/morph_engine.py",
-    "backend/app/immutable_guard.py",
-    "backend/app/daytona_runner.py",
-    "backend/app/braintrust_logger.py",
-    "backend/app/models.py",
-    "backend/app/elevenlabs_voice.py",
-    "backend/app/scoreboard.py",
-    "backend/app/main.py",
-    ".github/**",
     "Dockerfile",
-    "docs/**"
+    "docs/**",
+    ".github/**",
+    "backend/**",
+    "frontend/src/immutable/**",
+    "frontend/src/components/**",
+    "frontend/src/lib/**",
+    "frontend/src/App.tsx",
+    "frontend/src/main.tsx",
+    "frontend/src/index.css"
   ],
   "mutable_roots": [
-    "frontend/src/mutable/**",
-    "frontend/src/components/**",
-    "frontend/src/App.tsx",
-    "frontend/src/index.css"
+    "frontend/src/mutable/**"
   ]
 }

@@ -55,8 +55,13 @@ def mutable_context(max_bytes: int = 60_000) -> dict[str, str]:
     out: dict[str, str] = {}
     total = 0
     for glob in roots:
-        # expand the glob under repo root
-        for f in REPO_ROOT.glob(_norm(glob)):
+        # strip a trailing /** and walk the directory for all files
+        base = _norm(glob)
+        base = base[:-3] if base.endswith("/**") else base
+        base_dir = REPO_ROOT / base
+        if not base_dir.exists():
+            continue
+        for f in base_dir.rglob("*"):
             if not f.is_file():
                 continue
             rel = str(f.relative_to(REPO_ROOT))
