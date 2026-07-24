@@ -6,6 +6,7 @@ export default function Stage() {
       <div className="space-y-2">
         <div className="text-6xl text-blue-500">🦘</div>
         <h1 className="text-4xl font-bold tracking-tight text-emerald-500">haha silly words</h1>
+        <div className="mx-auto mt-2 h-1 w-24 rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500" />
         <p className="text-lg text-muted-foreground">built by three racing models</p>
       </div>
       <p className="max-w-md text-muted-foreground">
