@@ -14,6 +14,7 @@ from daytona import (
     DaytonaConfig,
     CreateSandboxFromSnapshotParams,
     CreateSandboxFromImageParams,
+    Image,
     Resources,
     FileUpload,
     SessionExecuteRequest,
@@ -22,6 +23,20 @@ from daytona import (
 from . import config
 from .immutable_guard import anchors
 from .schemas import FileEdit
+
+
+# Deps baked into a cached image (built once, reused ~24h) → candidates never install.
+# Bump config.DEPS_VERSION to bust the cache when package.json changes.
+def _baked_image() -> Image:
+    return (
+        Image.base(config.DAYTONA_IMAGE)
+        .workdir("/home/daytona")
+        .run_commands(
+            f"echo deps-v{config.DEPS_VERSION}",
+            f"git clone --depth 1 https://github.com/{config.GITHUB_REPO}.git repo",
+            f"cd repo/{config.APP_SUBDIR} && npm install --no-audit --no-fund",
+        )
+    )
 
 
 @dataclass
@@ -41,17 +56,59 @@ def _daytona() -> AsyncDaytona:
 
 
 async def _create(daytona, keep: bool):
-    """Create a sandbox from either a public image (default) or a warm snapshot."""
+    """Create a sandbox from the warm baked image (repo + node_modules pre-installed)."""
     if config.DAYTONA_MODE == "snapshot":
         return await daytona.create(CreateSandboxFromSnapshotParams(
             snapshot=config.DAYTONA_SNAPSHOT, ephemeral=True, auto_stop_interval=0,
         ))
+    # Tier cap is 10GiB total memory; 3 racers must fit → 3GiB each (9GiB total).
     return await daytona.create(CreateSandboxFromImageParams(
-        image=config.DAYTONA_IMAGE,
-        resources=Resources(cpu=2, memory=4, disk=8),
+        image=_baked_image(),
+        resources=Resources(cpu=2, memory=3, disk=5),
         ephemeral=True,
         auto_stop_interval=0,
     ))
+
+
+async def _sync_repo(sandbox) -> None:
+    """The baked repo may be behind main; fast-forward it. node_modules stays baked."""
+    await sandbox.process.exec(
+        "cd repo && git fetch --depth 1 origin main && git reset --hard FETCH_HEAD",
+        timeout=90,
+    )
+
+
+_warm_lock = asyncio.Lock()
+_warmed = False
+
+
+async def ensure_warm() -> None:
+    """Build + cache the baked image ONCE (first run) so the 3 concurrent candidate
+    creates reuse the cache instead of racing the same image build."""
+    global _warmed
+    if _warmed or config.DAYTONA_MODE == "snapshot":
+        return
+    async with _warm_lock:
+        if _warmed:
+            return
+        daytona = _daytona()
+        sb = None
+        try:
+            async with daytona:
+                sb = await _create(daytona, keep=False)
+                await sb.delete()
+                sb = None
+            _warmed = True
+        except Exception:  # noqa: BLE001 — don't block morphs forever if warmup fails
+            if sb is not None:
+                try:
+                    await sb.delete()
+                except Exception:  # noqa: BLE001
+                    pass
+
+
+def is_warm() -> bool:
+    return _warmed
 
 
 def _repo_url_with_token() -> str:
@@ -87,22 +144,15 @@ async def evaluate(files: list[FileEdit], emit_step=None) -> EvalOut:
     sandbox = None
     try:
         async with daytona:
-            await step("sandbox", "spinning up node:20 sandbox")
+            await step("sandbox", "warm sandbox (deps pre-baked)")
             sandbox = await _create(daytona, keep=False)
-            await step("clone", "cloning the repo")
-            await _clone_repo(sandbox)
+            await step("sync", "syncing repo to latest main")
+            await _sync_repo(sandbox)
             await _write_files(sandbox, files)
 
             app_dir = f"repo/{config.APP_SUBDIR}"
 
-            # --- install deps (skipped if a warm snapshot already has node_modules) ---
-            await step("install", "npm install")
-            install = await sandbox.process.exec(config.INSTALL_CMD, cwd=app_dir, timeout=420)
-            if install.exit_code != 0:
-                out.build_log = (install.result or "")[-4000:]
-                out.error = "npm install failed"
-                await step("install_failed", "npm install failed")
-                return out
+            # node_modules is baked into the image — no npm install per candidate.
 
             # --- compile? ---
             await step("build", "tsc + vite build")
@@ -180,7 +230,7 @@ async def ship(files: list[FileEdit], message: str) -> str | None:
     try:
         async with daytona:
             sandbox = await _create(daytona, keep=False)
-            await _clone_repo(sandbox)
+            await _sync_repo(sandbox)
             await _write_files(sandbox, files)
             await sandbox.git.add("repo", ["."])
             resp = await sandbox.git.commit(

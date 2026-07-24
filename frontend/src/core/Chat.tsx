@@ -16,11 +16,11 @@ const RACER_COLOR: Record<string, string> = {
   qwen: 'text-amber-400',
 }
 const PHASE_LABEL: Record<string, string> = {
-  thinking: 'thinking', generated: 'proposed', sandbox: 'sandbox', clone: 'cloning',
-  install: 'installing', build: 'building', compiled: 'compiled', serve: 'starting',
+  thinking: 'thinking', generated: 'proposed', sandbox: 'warm sandbox', sync: 'syncing',
+  build: 'building', compiled: 'compiled', serve: 'starting',
   render: 'rendering', rendered: 'rendered', chat_check: 'checking chat', chat_ok: 'chat ✓',
   build_failed: 'compile failed', render_failed: 'no render', chat_broken: 'chat ✗',
-  install_failed: 'install failed', done: 'done',
+  done: 'done',
 }
 
 interface RacerLive {
@@ -158,6 +158,7 @@ export function Chat() {
             if (racer) set(racer, { status: 'won' })
             log.push({ racer, text: `WINNER (${ev.total_ms}ms)` })
             return { ...t, racers, log, winner: racer }
+          case 'warming': log.push({ text: '🔥 warming the sandbox image (first run only)…' }); break
           case 'applied': log.push({ text: '✍️  written locally — hot-reloading' }); break
           case 'shipping': log.push({ text: '⬆️  pushing to GitHub' }); break
           case 'shipped':

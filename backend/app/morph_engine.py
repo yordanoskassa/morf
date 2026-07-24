@@ -60,6 +60,9 @@ async def run_morph(req: MorphRequest) -> MorphResponse:
     # 1. race the 3 models
     raced = await models.race(req.prompt, req.focus)
 
+    # warm the baked image once so concurrent sandbox creates don't race the build
+    await daytona_runner.ensure_warm()
+
     # 2. evaluate each candidate concurrently (guard -> sandbox)
     candidates = await asyncio.gather(
         *(_run_candidate(req.prompt, r, plan, gen_ms, err) for r, plan, gen_ms, err in raced)
@@ -141,6 +144,9 @@ async def run_morph_stream(req: MorphRequest):
         try:
             await emit({"type": "start", "prompt": req.prompt,
                         "racers": [{"key": r.key, "role": r.role} for r in config.RACERS]})
+            if not daytona_runner.is_warm():
+                await emit({"type": "warming", "detail": "warming the sandbox image (first run only)"})
+                await daytona_runner.ensure_warm()
             cands = await asyncio.gather(
                 *(_candidate_stream(emit, r, req.prompt, req.focus) for r in config.RACERS)
             )

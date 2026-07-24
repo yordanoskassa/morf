@@ -183,7 +183,6 @@ const IntroBeat: React.FC = () => (
     <Wordmark fontSize={230} startFrame={6}>
       morf
     </Wordmark>
-    <Rule startFrame={26} />
   </div>
 );
 
@@ -194,7 +193,6 @@ const OutroBeat: React.FC = () => {
       <Wordmark fontSize={230} startFrame={4}>
         morf
       </Wordmark>
-      <Rule startFrame={22} width={380} />
       {frame > 34 && (
         <div style={{ fontFamily: pixelFont, fontSize: 52, color: theme.ink }}>
           the app that builds itself

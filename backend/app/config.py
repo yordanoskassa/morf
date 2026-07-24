@@ -51,6 +51,9 @@ DAYTONA_API_KEY = os.getenv("DAYTONA_API_KEY", "")
 DAYTONA_MODE = os.getenv("DAYTONA_MODE", "image")
 DAYTONA_IMAGE = os.getenv("DAYTONA_IMAGE", "node:20-bookworm")
 DAYTONA_SNAPSHOT = os.getenv("DAYTONA_SNAPSHOT", "morph-node20")
+# Deps are baked into a cached image (built once, reused 24h) so candidates never run
+# npm install. Bump this whenever frontend/package.json changes to rebuild the image.
+DEPS_VERSION = os.getenv("DEPS_VERSION", "1")
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID", "")

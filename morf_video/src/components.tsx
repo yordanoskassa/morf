@@ -24,13 +24,6 @@ export const PaperBackground: React.FC = () => {
           background: `radial-gradient(120% 80% at 50% 32%, #ffffff 0%, ${theme.paper} 60%, #F1EFE9 100%)`,
         }}
       />
-      {/* faint pixel grid for texture */}
-      <AbsoluteFill
-        style={{
-          backgroundImage: `linear-gradient(${theme.hair} 1px, transparent 1px), linear-gradient(90deg, ${theme.hair} 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-        }}
-      />
       {/* very soft edge vignette */}
       <AbsoluteFill
         style={{ boxShadow: "inset 0 0 260px 60px rgba(0,0,0,0.05)" }}
