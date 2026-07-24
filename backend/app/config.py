@@ -63,6 +63,11 @@ ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID", "")
 MONGODB_URI = os.getenv("MONGODB_URI", "")
 MONGODB_DB = os.getenv("MONGODB_DB", "morph")
 
+# On the DEPLOYED backend, reset the working copy to origin/main before each morph so
+# models always edit the current live code (the Docker image is a frozen snapshot).
+# Leave OFF for localhost dev — it would git-reset away your uncommitted local edits.
+SYNC_TO_MAIN = os.getenv("SYNC_TO_MAIN", "false").lower() in ("1", "true", "yes")
+
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")          # "owner/repo"
 GITHUB_USER = os.getenv("GITHUB_USER", "morph-bot")

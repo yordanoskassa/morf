@@ -1,9 +1,25 @@
 """Orchestrates one morph: guard -> race 3 models -> sandbox each -> score -> ship. 🔒 immutable."""
 from __future__ import annotations
 import asyncio
+import subprocess
 
 from . import config, models, daytona_runner, braintrust_logger, store
 from .immutable_guard import check_files, is_kernel, in_app, REPO_ROOT
+
+
+def _sync_main() -> None:
+    """Deployed only: reset the backend's working copy to origin/main so models edit the
+    current live code (the image is a frozen snapshot). No-op unless SYNC_TO_MAIN is set."""
+    if not config.SYNC_TO_MAIN:
+        return
+    url = f"https://{config.GITHUB_USER}:{config.GITHUB_TOKEN}@github.com/{config.GITHUB_REPO}.git"
+    try:
+        subprocess.run(["git", "-C", str(REPO_ROOT), "fetch", "--depth", "1", url, "main"],
+                       check=True, capture_output=True, timeout=60)
+        subprocess.run(["git", "-C", str(REPO_ROOT), "reset", "--hard", "FETCH_HEAD"],
+                       check=True, capture_output=True, timeout=30)
+    except Exception:  # noqa: BLE001 — never let a sync failure block a morph
+        pass
 from .schemas import MorphRequest, MorphResponse, CandidateResult, MorphPlan, FileEdit
 
 
@@ -128,6 +144,8 @@ async def _run_candidate(prompt: str, racer, plan: MorphPlan | None, gen_ms: int
 
 
 async def run_morph(req: MorphRequest) -> MorphResponse:
+    _sync_main()   # deployed: edit the current live code, not a frozen image snapshot
+
     # 1. race the 3 models (with a short memory of recent changes)
     raced = await models.race(req.prompt, req.focus, await _history_text())
 
@@ -264,6 +282,7 @@ async def run_morph_stream(req: MorphRequest):
         try:
             await emit({"type": "start", "prompt": req.prompt,
                         "racers": [{"key": r.key, "role": r.role} for r in config.RACERS]})
+            _sync_main()   # deployed: edit the current live code, not a frozen image snapshot
             await daytona_runner.kill_live()   # free the previous live preview before racing
             if not daytona_runner.is_warm():
                 await emit({"type": "warming", "detail": "warming the sandbox image (first run only)"})

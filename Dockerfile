@@ -6,7 +6,7 @@ WORKDIR /app
 
 # System deps (certs for HTTPS to Fireworks / Daytona / Braintrust / Mongo)
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl \
+  && apt-get install -y --no-install-recommends ca-certificates curl git \
   && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt ./backend/requirements.txt
