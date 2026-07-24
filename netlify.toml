@@ -1,7 +1,6 @@
-# Frontend → Netlify. Backend stays on EasyPanel.
-# In Netlify UI set:
-#   VITE_API_BASE = https://<your-easypanel-backend-url>
-# (no trailing slash)
+# Frontend → Netlify. Backend on EasyPanel:
+#   https://anton-morf.hrvnvm.easypanel.host
+# (hardcoded in frontend/src/core/morphClient.ts)
 
 [build]
   base = "frontend"

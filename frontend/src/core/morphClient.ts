@@ -3,7 +3,7 @@
 import type { MorphResponse, ScoreboardResponse } from './types'
 import { getUser } from './user'
 
-const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+const BASE = 'https://anton-morf.hrvnvm.easypanel.host'
 
 export type MorphEvent = { type: string; [k: string]: unknown }
 
